@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#F4F1E8" />
+    <title>غير متصل · مسار</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        background: #f4f1e8;
+        color: #11110f;
+        font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
+        padding: 24px;
+      }
+      .card {
+        max-width: 380px;
+        background: #fffdf7;
+        border: 1px solid #e5ded1;
+        border-radius: 22px;
+        box-shadow: 0 12px 38px rgba(17, 17, 15, 0.08);
+        padding: 32px;
+        text-align: center;
+      }
+      h1 { font-size: 28px; line-height: 1.15; margin: 16px 0 8px; }
+      p { color: #625d54; margin: 0 0 20px; line-height: 1.7; }
+      button {
+        background: #11110f;
+        color: #f4f1e8;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 22px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .emoji { font-size: 40px; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="emoji" aria-hidden="true">📡</div>
+      <h1>أنت غير متصل</h1>
+      <p>مسار يحتاج اتصال عشان يجيب طلباتك. تأكد من الإنترنت وجرّب مرة ثانية.</p>
+      <button type="button" onclick="location.reload()">جرّب مرة ثانية</button>
+    </main>
+  </body>
+</html>
