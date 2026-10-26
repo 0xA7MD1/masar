@@ -58,6 +58,16 @@ export function weekStartISO(iso: string): string {
   return addDays(iso, -parseISODate(iso).getUTCDay());
 }
 
+/** "2026-10" */
+export function monthKey(iso: string): string {
+  return iso.slice(0, 7);
+}
+
+export function daysInMonth(iso: string): number {
+  const d = parseISODate(iso);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+}
+
 export function weekdayIndex(iso: string): number {
   return parseISODate(iso).getUTCDay();
 }

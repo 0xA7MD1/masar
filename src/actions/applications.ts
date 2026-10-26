@@ -15,6 +15,7 @@ import {
 } from "@/lib/celebrations";
 import type { Status } from "@/lib/constants";
 import { todayISO } from "@/lib/dates";
+import { goalTargets, type GoalTargets } from "@/lib/goals";
 import { isSubmitted, motivationSnapshot, type MotivationSnapshot } from "@/lib/metrics";
 import { getApplication, getSettings, listApplications, listHistory } from "@/lib/queries";
 import { applicationSchema, idSchema, statusSchema } from "@/lib/validation";
@@ -48,9 +49,9 @@ function statusFeedback(
   to: Status,
   before: MotivationSnapshot,
   after: { apps: Application[]; snapshot: MotivationSnapshot },
-  weeklyGoal: number,
+  targets: GoalTargets,
 ): MotivationFeedback {
-  const celebrations = snapshotCelebrations(before, after.snapshot, weeklyGoal);
+  const celebrations = snapshotCelebrations(before, after.snapshot, targets);
   const special = statusCelebration(to, app);
   if (special) celebrations.unshift(special);
   return {
@@ -74,7 +75,8 @@ export async function createApplication(
   const values = parsed.data;
 
   const today = todayISO();
-  const [{ snapshot: before }, { weeklyGoal }] = await Promise.all([loadState(today), getSettings()]);
+  const [{ snapshot: before }, { goal }] = await Promise.all([loadState(today), getSettings()]);
+  const targets = goalTargets(goal, today);
 
   const db = getDb();
   const now = new Date();
@@ -94,7 +96,7 @@ export async function createApplication(
   const id = inserted[0].id;
 
   const after = await loadState(today);
-  const feedback = statusFeedback({ id, ...values }, values.status, before, after, weeklyGoal);
+  const feedback = statusFeedback({ id, ...values }, values.status, before, after, targets);
   revalidateAll();
   return ok({ id, ...feedback });
 }
@@ -117,7 +119,8 @@ export async function updateApplication(
   const values = parsed.data;
   const today = todayISO();
   const statusChanged = values.status !== existing.status;
-  const [{ snapshot: before }, { weeklyGoal }] = await Promise.all([loadState(today), getSettings()]);
+  const [{ snapshot: before }, { goal }] = await Promise.all([loadState(today), getSettings()]);
+  const targets = goalTargets(goal, today);
 
   const db = getDb();
   const now = new Date();
@@ -143,9 +146,9 @@ export async function updateApplication(
   const after = await loadState(today);
   revalidateAll();
   if (!statusChanged) {
-    return ok({ celebrations: snapshotCelebrations(before, after.snapshot, weeklyGoal) });
+    return ok({ celebrations: snapshotCelebrations(before, after.snapshot, targets) });
   }
-  return ok(statusFeedback({ ...existing, ...values }, values.status, before, after, weeklyGoal));
+  return ok(statusFeedback({ ...existing, ...values }, values.status, before, after, targets));
 }
 
 export async function updateApplicationStatus(
@@ -166,7 +169,8 @@ export async function updateApplicationStatus(
   if (existing.status === to) return ok({ celebrations: [] });
 
   const today = todayISO();
-  const [{ snapshot: before }, { weeklyGoal }] = await Promise.all([loadState(today), getSettings()]);
+  const [{ snapshot: before }, { goal }] = await Promise.all([loadState(today), getSettings()]);
+  const targets = goalTargets(goal, today);
 
   const db = getDb();
   const now = new Date();
@@ -187,7 +191,7 @@ export async function updateApplicationStatus(
 
   const after = await loadState(today);
   revalidateAll();
-  return ok(statusFeedback(existing, to, before, after, weeklyGoal));
+  return ok(statusFeedback(existing, to, before, after, targets));
 }
 
 export async function deleteApplication(id: number): Promise<ActionResult> {

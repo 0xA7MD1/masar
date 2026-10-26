@@ -15,6 +15,13 @@
       "when": 1793050186679,
       "tag": "0001_follow_up_url",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793051601288,
+      "tag": "0002_goal_period",
+      "breakpoints": true
     }
   ]
 }

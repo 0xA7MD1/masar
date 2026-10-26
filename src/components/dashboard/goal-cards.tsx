@@ -1,9 +1,13 @@
 import { Flame, Sparkles, Target } from "lucide-react";
 
 import { Card } from "@/components/page-header";
-import { applicationsPhrase } from "@/lib/arabic";
+import { applicationsPhrase, countPhrase } from "@/lib/arabic";
+import { GOAL_PERIOD_KEYS, type GoalPeriod } from "@/lib/constants";
 import { WEEKDAY_INITIALS, WEEKDAYS } from "@/lib/dates";
+import { GOAL_META, type Goal, type GoalCounts, type GoalTargets } from "@/lib/goals";
 import { cn } from "@/lib/utils";
+
+const timesPhrase = (n: number) => countPhrase(n, { one: "مرة وحدة", two: "مرتين", few: "مرات", many: "مرة" });
 
 function Bar({ value, className }: { value: number; className?: string }) {
   return (
@@ -25,39 +29,97 @@ function CardLabel({ icon, children }: { icon: React.ReactNode; children: React.
   );
 }
 
-export function WeeklyGoalCard({
+function GoalRow({
+  period,
   count,
+  target,
+  wins,
+  primary,
+}: {
+  period: GoalPeriod;
+  count: number;
+  target: number;
+  wins: number;
+  primary: boolean;
+}) {
+  const meta = GOAL_META[period];
+  const reached = count >= target;
+  return (
+    <li className="flex items-center gap-3">
+      <span
+        className={cn(
+          "grid size-11 shrink-0 place-items-center rounded-2xl text-xl transition",
+          reached ? "bg-brand-soft shadow-sm" : "bg-sand/70 grayscale opacity-60",
+        )}
+        title={reached ? `شارة «${meta.badge}»` : `حقق ${meta.label} وتاخذ شارة «${meta.badge}»`}
+      >
+        <span aria-hidden="true">{meta.emoji}</span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+            {meta.label}
+            {primary ? (
+              <span className="rounded-full bg-cream px-2 py-0.5 text-[11px] font-medium text-ink-muted">هدفك</span>
+            ) : null}
+          </h3>
+          <span dir="ltr" className="text-sm tabular-nums">
+            <span className="font-bold text-ink">{count}</span>
+            <span className="text-ink-subtle">/{target}</span>
+          </span>
+        </div>
+        <div
+          className="mt-1.5"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={target}
+          aria-valuenow={Math.min(count, target)}
+          aria-label={`التقدّم نحو ${meta.label}`}
+        >
+          <Bar value={(count / target) * 100} className={reached ? "bg-brand-deep" : "bg-brand"} />
+        </div>
+        <p className="mt-1 text-xs text-ink-subtle">
+          {reached ? <span className="font-semibold text-brand-deep">{meta.badge} ✓ · </span> : null}
+          {wins > 0 ? `حققته ${timesPhrase(wins)}` : "ما حققته للحين"}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+export function GoalsCard({
   goal,
+  counts,
+  targets,
+  wins,
   days,
 }: {
-  count: number;
-  goal: number;
+  goal: Goal;
+  counts: GoalCounts;
+  targets: GoalTargets;
+  wins: GoalCounts;
   days: Array<{ date: string; count: number; isToday: boolean; isFuture: boolean }>;
 }) {
-  const reached = count >= goal;
+  const leftToday = targets.day - counts.day;
+  const leftForGoal = targets[goal.period] - counts[goal.period];
   return (
-    <Card aria-labelledby="weekly-goal-title">
+    <Card aria-labelledby="goals-title">
       <CardLabel icon={<Target className="size-5 text-brand" aria-hidden="true" />}>
-        <span id="weekly-goal-title">هدف الأسبوع</span>
+        <span id="goals-title">أهدافك</span>
       </CardLabel>
-      <p className="mt-4 flex items-baseline gap-2">
-        <span dir="ltr" className="inline-flex items-baseline gap-0.5">
-          <span className="display text-5xl">{count}</span>
-          <span className="text-2xl font-semibold text-ink-subtle">/{goal}</span>
-        </span>
-        <span className="text-sm text-ink-muted">هذا الأسبوع</span>
-      </p>
-      <div
-        className="mt-4"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={goal}
-        aria-valuenow={Math.min(count, goal)}
-        aria-label="التقدّم نحو هدف الأسبوع"
-      >
-        <Bar value={(count / goal) * 100} className={reached ? "bg-brand-deep" : "bg-brand"} />
-      </div>
-      <ul className="mt-4 grid grid-cols-7 gap-1.5" aria-label="طلبات كل يوم هذا الأسبوع">
+      <ul className="mt-4 space-y-3.5">
+        {GOAL_PERIOD_KEYS.map((period) => (
+          <GoalRow
+            key={period}
+            period={period}
+            count={counts[period]}
+            target={targets[period]}
+            wins={wins[period]}
+            primary={period === goal.period}
+          />
+        ))}
+      </ul>
+      <ul className="mt-5 grid grid-cols-7 gap-1.5" aria-label="طلبات كل يوم هذا الأسبوع">
         {days.map((day, i) => (
           <li key={day.date} className="flex flex-col items-center gap-1.5">
             <span
@@ -79,10 +141,12 @@ export function WeeklyGoalCard({
         ))}
       </ul>
       <p className="mt-4 text-sm text-ink-muted">
-        {reached ? (
-          <span className="font-semibold text-brand-deep">حققت هدفك 🎯 أي طلب زيادة بونص.</span>
+        {leftForGoal <= 0 ? (
+          <span className="font-semibold text-brand-deep">حققت هدفك {GOAL_META[goal.period].emoji} أي طلب زيادة بونص.</span>
+        ) : leftToday > 0 ? (
+          <>باقي {applicationsPhrase(leftToday)} اليوم وتحقق هدف اليوم.</>
         ) : (
-          <>باقي {applicationsPhrase(goal - count)} وتحقق هدفك.</>
+          <>خلصت اليوم ✓ باقي {applicationsPhrase(leftForGoal)} على {GOAL_META[goal.period].label}.</>
         )}
       </p>
     </Card>

@@ -194,8 +194,8 @@ async function main() {
   await db.delete(applications);
   await db
     .insert(settings)
-    .values({ id: 1, weeklyGoal: 10, displayName: "أحمد" })
-    .onConflictDoUpdate({ target: settings.id, set: { weeklyGoal: 10, displayName: "أحمد" } });
+    .values({ id: 1, goalPeriod: "week", goalTarget: 10, displayName: "أحمد" })
+    .onConflictDoUpdate({ target: settings.id, set: { goalPeriod: "week", goalTarget: 10, displayName: "أحمد" } });
 
   for (const sample of SAMPLES) {
     const { appliedDaysAgo, followUpInDays, path, ...fields } = sample;

@@ -11,7 +11,18 @@ const CelebrationContext = createContext<Celebrate>(() => {});
 
 const CONFETTI_COLORS = ["#268F86", "#35B0A5", "#00443C", "#FF4F2F", "#D8E3D3", "#FFFDF7"];
 
-async function fireConfetti(big: boolean) {
+type ConfettiSize = "small" | "big" | "huge";
+
+/** Each goal period gets its own reward size, so a month feels bigger than a day. */
+function confettiSize(celebrations: Celebration[]): ConfettiSize {
+  const kinds = new Set(celebrations.map((c) => c.kind));
+  if (kinds.has("month_goal") || kinds.has("accepted")) return "huge";
+  if (kinds.has("week_goal") || kinds.has("offer")) return "big";
+  return "small";
+}
+
+async function fireConfetti(size: ConfettiSize) {
+  const big = size !== "small";
   const confetti = (await import("canvas-confetti")).default;
   const base = {
     colors: CONFETTI_COLORS,
@@ -26,6 +37,11 @@ async function fireConfetti(big: boolean) {
       confetti({ ...base, particleCount: 60, angle: 60, spread: 65, origin: { x: 0, y: 0.65 } });
       confetti({ ...base, particleCount: 60, angle: 120, spread: 65, origin: { x: 1, y: 0.65 } });
     }, 250);
+  }
+  if (size === "huge") {
+    window.setTimeout(() => {
+      confetti({ ...base, particleCount: 160, spread: 140, startVelocity: 50, scalar: 1.15, origin: { x: 0.5, y: 0.2 } });
+    }, 700);
   }
 }
 
@@ -67,8 +83,7 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
     if (!feedback) return;
     const { celebrations, encouragement } = feedback;
     if (celebrations.length > 0) {
-      const big = celebrations.some((c) => c.kind === "offer" || c.kind === "accepted" || c.kind === "weekly_goal");
-      void fireConfetti(big);
+      void fireConfetti(confettiSize(celebrations));
       celebrations.forEach((celebration, i) => {
         window.setTimeout(
           () => toast.custom(() => <CelebrationToast celebration={celebration} />, { duration: 6500 }),

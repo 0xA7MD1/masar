@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import {
+  GOAL_PERIOD_KEYS,
+  GOAL_TARGET_MAX,
   JOB_TYPE_KEYS,
   PRIORITY_KEYS,
   SOURCE_KEYS,
@@ -97,17 +99,21 @@ export const applicationSchema = applicationFields.transform((values, ctx) => {
 
 export type ApplicationValues = z.output<typeof applicationSchema>;
 
-export const settingsSchema = z.object({
-  displayName: z.string().trim().max(40, "الاسم طويل شوي، خله 40 حرف أو أقل"),
-  weeklyGoal: z.preprocess(
-    (v) => (typeof v === "string" ? toWesternDigits(v.trim()) : v),
-    z.coerce
-      .number({ error: "اكتب رقم" })
-      .int("اكتب رقم صحيح")
-      .min(1, "الهدف لازم يكون 1 أو أكثر")
-      .max(100, "خلّ الهدف 100 أو أقل"),
-  ),
-});
+export const settingsSchema = z
+  .object({
+    displayName: z.string().trim().max(40, "الاسم طويل شوي، خله 40 حرف أو أقل"),
+    goalPeriod: z.enum(GOAL_PERIOD_KEYS, { error: "اختر يومي أو أسبوعي أو شهري" }),
+    goalTarget: z.preprocess(
+      (v) => (typeof v === "string" ? toWesternDigits(v.trim()) : v),
+      z.coerce.number({ error: "اكتب رقم" }).int("اكتب رقم صحيح").min(1, "الهدف لازم يكون 1 أو أكثر"),
+    ),
+  })
+  .superRefine((values, ctx) => {
+    const max = GOAL_TARGET_MAX[values.goalPeriod];
+    if (values.goalTarget > max) {
+      ctx.addIssue({ code: "custom", path: ["goalTarget"], message: `خلّ الهدف ${max} أو أقل` });
+    }
+  });
 
 // Backups use snake_case keys that mirror the database columns.
 const timestamp = z
@@ -127,7 +133,10 @@ export const backupSchema = z.object({
   version: z.literal(1, { error: "نسخة الملف غير مدعومة" }),
   settings: z
     .object({
-      weekly_goal: z.number().int().min(1).max(100),
+      // Backups made before goal periods existed only carry weekly_goal.
+      weekly_goal: z.number().int().min(1).max(GOAL_TARGET_MAX.week).optional(),
+      goal_period: z.enum(GOAL_PERIOD_KEYS).optional(),
+      goal_target: z.number().int().min(1).max(GOAL_TARGET_MAX.month).optional(),
       display_name: z.string().max(40),
     })
     .nullish(),

@@ -15,7 +15,7 @@ export default async function SettingsPage() {
       <div className="grid max-w-3xl gap-6">
         <Card aria-labelledby="profile-title">
           <CardTitle id="profile-title">ملفك وهدفك</CardTitle>
-          <ProfileForm displayName={settings.displayName} weeklyGoal={settings.weeklyGoal} />
+          <ProfileForm displayName={settings.displayName} goal={settings.goal} />
         </Card>
 
         <Card aria-labelledby="backup-title">

@@ -1,9 +1,16 @@
 import { fullName } from "./application-name";
 import { streakPhrase } from "./arabic";
-import type { Status } from "./constants";
+import { GOAL_PERIOD_KEYS, type GoalPeriod, type Status } from "./constants";
+import { GOAL_META, type GoalTargets } from "./goals";
 import type { MotivationSnapshot } from "./metrics";
 
-export type CelebrationKind = "weekly_goal" | "streak_record" | "interview" | "offer" | "accepted" | "badge";
+export type CelebrationKind =
+  | `${GoalPeriod}_goal`
+  | "streak_record"
+  | "interview"
+  | "offer"
+  | "accepted"
+  | "badge";
 
 export type Celebration = {
   kind: CelebrationKind;
@@ -21,17 +28,22 @@ export type MotivationFeedback = {
 export function snapshotCelebrations(
   before: MotivationSnapshot,
   after: MotivationSnapshot,
-  weeklyGoal: number,
+  targets: GoalTargets,
 ): Celebration[] {
   const list: Celebration[] = [];
 
-  if (before.weekCount < weeklyGoal && after.weekCount >= weeklyGoal) {
-    list.push({
-      kind: "weekly_goal",
-      emoji: "🎯",
-      title: "حققت هدف الأسبوع!",
-      description: `${after.weekCount}/${weeklyGoal} هذا الأسبوع — شغل عظيم، كمّل بنفس الروح.`,
-    });
+  // Longest period first: reaching the month usually also closes the day and the week.
+  for (const period of [...GOAL_PERIOD_KEYS].reverse()) {
+    const target = targets[period];
+    const meta = GOAL_META[period];
+    if (before.goalCounts[period] < target && after.goalCounts[period] >= target) {
+      list.push({
+        kind: `${period}_goal`,
+        emoji: meta.emoji,
+        title: `حققت ${meta.label}!`,
+        description: `${after.goalCounts[period]}/${target} ${meta.current} — ${meta.reward}`,
+      });
+    }
   }
 
   if (after.currentStreak >= 2 && after.currentStreak > before.bestStreak) {

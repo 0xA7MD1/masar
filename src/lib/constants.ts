@@ -106,4 +106,11 @@ export const PRIORITY_META: Record<Priority, { label: string; color: string; ran
 /** Days an application can sit in "applied" before we suggest marking it ghosted. */
 export const STALE_AFTER_DAYS = 21;
 
-export const DEFAULT_WEEKLY_GOAL = 10;
+/** The goal is set once for one period; the other periods are derived from it. */
+export const GOAL_PERIOD_KEYS = ["day", "week", "month"] as const;
+export type GoalPeriod = (typeof GOAL_PERIOD_KEYS)[number];
+
+export const DEFAULT_GOAL_PERIOD: GoalPeriod = "week";
+export const DEFAULT_GOAL_TARGET = 10;
+
+export const GOAL_TARGET_MAX: Record<GoalPeriod, number> = { day: 50, week: 300, month: 1000 };

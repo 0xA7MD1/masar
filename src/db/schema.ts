@@ -2,7 +2,9 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // Relative import (not "@/") so drizzle-kit and the tsx scripts resolve it too.
 import {
-  DEFAULT_WEEKLY_GOAL,
+  DEFAULT_GOAL_PERIOD,
+  DEFAULT_GOAL_TARGET,
+  GOAL_PERIOD_KEYS,
   JOB_TYPE_KEYS,
   PRIORITY_KEYS,
   SOURCE_KEYS,
@@ -66,7 +68,9 @@ export const statusHistory = sqliteTable(
 /** Single row, always id = 1. */
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey(),
-  weeklyGoal: integer("weekly_goal").notNull().default(DEFAULT_WEEKLY_GOAL),
+  /** Applications per `goalPeriod`; the other periods are derived in lib/goals. */
+  goalTarget: integer("goal_target").notNull().default(DEFAULT_GOAL_TARGET),
+  goalPeriod: text("goal_period", { enum: GOAL_PERIOD_KEYS }).notNull().default(DEFAULT_GOAL_PERIOD),
   displayName: text("display_name").notNull().default(""),
 });
 

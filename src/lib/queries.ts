@@ -5,15 +5,17 @@ import { and, asc, desc, eq, gte, lte, or, sql, type AnyColumn, type SQL } from 
 import { getDb } from "@/db";
 import { applications, settings, statusHistory } from "@/db/schema";
 
-import { DEFAULT_WEEKLY_GOAL, PRIORITY_KEYS, STATUS_KEYS } from "./constants";
+import { DEFAULT_GOAL_PERIOD, DEFAULT_GOAL_TARGET, PRIORITY_KEYS, STATUS_KEYS } from "./constants";
 import type { ApplicationFilters, SortKey } from "./filters";
+import type { Goal } from "./goals";
 
 export async function getSettings() {
   const [row] = await getDb().select().from(settings).where(eq(settings.id, 1));
-  return {
-    weeklyGoal: row?.weeklyGoal ?? DEFAULT_WEEKLY_GOAL,
-    displayName: row?.displayName ?? "",
+  const goal: Goal = {
+    period: row?.goalPeriod ?? DEFAULT_GOAL_PERIOD,
+    target: row?.goalTarget ?? DEFAULT_GOAL_TARGET,
   };
+  return { goal, displayName: row?.displayName ?? "" };
 }
 
 export async function listApplications() {

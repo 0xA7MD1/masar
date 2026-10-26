@@ -8,6 +8,7 @@ import { getDb } from "@/db";
 import { applications, settings, statusHistory } from "@/db/schema";
 import { fail, ok, UNAUTHORIZED_MESSAGE, validationFail, type ActionResult } from "@/lib/action-result";
 import { endSession, requireAuth } from "@/lib/auth/server";
+import { GOAL_TARGET_MAX } from "@/lib/constants";
 import { backupSchema, settingsSchema } from "@/lib/validation";
 
 async function isAllowed(): Promise<boolean> {
@@ -100,7 +101,15 @@ export async function importBackup(
     );
   }
   if (backup.settings) {
-    const values = { weeklyGoal: backup.settings.weekly_goal, displayName: backup.settings.display_name };
+    const { goal_period, goal_target, weekly_goal, display_name } = backup.settings;
+    const values = {
+      displayName: display_name,
+      ...(goal_period && goal_target
+        ? { goalPeriod: goal_period, goalTarget: Math.min(goal_target, GOAL_TARGET_MAX[goal_period]) }
+        : weekly_goal
+          ? { goalPeriod: "week" as const, goalTarget: weekly_goal }
+          : {}),
+    };
     statements.push(
       db.insert(settings).values({ id: 1, ...values }).onConflictDoUpdate({ target: settings.id, set: values }),
     );

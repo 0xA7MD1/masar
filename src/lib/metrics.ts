@@ -13,6 +13,7 @@ import {
   type Status,
 } from "./constants";
 import { addDays, diffDays, formatShortDate, monthLabel, toISODate, weekStartISO } from "./dates";
+import { goalCounts } from "./goals";
 
 type AppLike = Pick<
   Application,
@@ -116,10 +117,6 @@ export function weekDays(days: Map<string, number>, today: string) {
     const date = addDays(start, i);
     return { date, count: days.get(date) ?? 0, isToday: date === today, isFuture: date > today };
   });
-}
-
-export function weekCount(days: Map<string, number>, today: string): number {
-  return weekDays(days, today).reduce((sum, d) => sum + d.count, 0);
 }
 
 export type HeatmapCell = { date: string; count: number; future: boolean };
@@ -305,7 +302,7 @@ export function motivationSnapshot(apps: AppLike[], history: HistoryLike[], toda
   });
   return {
     submitted: funnel.submitted,
-    weekCount: weekCount(days, today),
+    goalCounts: goalCounts(days, today),
     currentStreak: streaks.current,
     bestStreak: streaks.best,
     earnedBadges: new Set(badges.filter((b) => b.earned).map((b) => b.id)),

@@ -20,10 +20,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FieldErrors } from "@/lib/action-result";
 import { applicationsPhrase } from "@/lib/arabic";
+import { GOAL_PERIOD_KEYS, type GoalPeriod } from "@/lib/constants";
+import { todayISO } from "@/lib/dates";
+import { GOAL_META, goalTargets, type Goal } from "@/lib/goals";
+import { toWesternDigits } from "@/lib/links";
+import { cn } from "@/lib/utils";
 
-export function ProfileForm({ displayName, weeklyGoal }: { displayName: string; weeklyGoal: number }) {
+const GOAL_PERIOD_LABELS: Record<GoalPeriod, string> = { day: "يومي", week: "أسبوعي", month: "شهري" };
+
+function GoalPreview({ goal }: { goal: Goal }) {
+  if (!Number.isInteger(goal.target) || goal.target < 1) return null;
+  const targets = goalTargets(goal, todayISO());
+  return (
+    <p className="text-sm text-ink-muted" aria-live="polite">
+      يعني:{" "}
+      {GOAL_PERIOD_KEYS.map((period, i) => (
+        <span key={period}>
+          {i > 0 ? " · " : null}
+          <span className={cn("font-semibold", period === goal.period ? "text-brand-deep" : "text-ink")}>
+            {targets[period]}
+          </span>{" "}
+          {GOAL_META[period].unit}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+export function ProfileForm({ displayName, goal }: { displayName: string; goal: Goal }) {
   const [pending, startTransition] = useTransition();
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [period, setPeriod] = useState<GoalPeriod>(goal.period);
+  const [targetText, setTargetText] = useState(String(goal.target));
+  const target = Number(toWesternDigits(targetText.trim()));
 
   return (
     <form
@@ -55,22 +84,57 @@ export function ProfileForm({ displayName, weeklyGoal }: { displayName: string; 
             aria-invalid={errors.displayName?.length ? true : undefined}
           />
         </Field>
-        <Field label="هدف الطلبات كل أسبوع" htmlFor="weeklyGoal" error={errors.weeklyGoal} hint="الأسبوع يبدأ يوم الأحد.">
+        <Field
+          label={`عدد الطلبات ${GOAL_META[period].unit}`}
+          htmlFor="goalTarget"
+          error={errors.goalTarget}
+          hint="الأسبوع يبدأ يوم الأحد."
+        >
           <Input
-            id="weeklyGoal"
-            name="weeklyGoal"
+            id="goalTarget"
+            name="goalTarget"
             // Text + numeric keyboard: a number input would render Arabic-Indic digits.
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
-            maxLength={3}
+            maxLength={4}
             dir="ltr"
             className="text-end"
-            defaultValue={weeklyGoal}
-            aria-invalid={errors.weeklyGoal?.length ? true : undefined}
+            value={targetText}
+            onChange={(event) => setTargetText(event.target.value)}
+            aria-invalid={errors.goalTarget?.length ? true : undefined}
           />
         </Field>
       </div>
+      <fieldset className="space-y-3">
+        <legend className="mb-2 text-sm font-medium text-ink">حط هدفك بـ</legend>
+        <div className="grid grid-cols-3 gap-1 rounded-2xl bg-sand/70 p-1">
+          {GOAL_PERIOD_KEYS.map((key) => (
+            <label
+              key={key}
+              className={cn(
+                "cursor-pointer rounded-xl px-3 py-2 text-center text-sm font-medium text-ink-muted transition",
+                "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand",
+                period === key && "bg-paper font-semibold text-ink shadow-sm",
+              )}
+            >
+              <input
+                type="radio"
+                name="goalPeriod"
+                value={key}
+                checked={period === key}
+                onChange={() => setPeriod(key)}
+                className="sr-only"
+              />
+              {GOAL_PERIOD_LABELS[key]}
+            </label>
+          ))}
+        </div>
+        <GoalPreview goal={{ period, target }} />
+        <p className="text-xs leading-relaxed text-ink-subtle">
+          تحط رقم واحد بس، والباقي ينحسب لحاله. كل هدف له شارة واحتفال خاص لما تحققه.
+        </p>
+      </fieldset>
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : <Save aria-hidden="true" />}

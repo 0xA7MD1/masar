@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Flame } from "lucide-react";
 
 import { Heatmap } from "@/components/dashboard/heatmap";
-import { StreakCard, QualityCard, WeeklyGoalCard } from "@/components/dashboard/goal-cards";
+import { GoalsCard, QualityCard, StreakCard } from "@/components/dashboard/goal-cards";
 import { AchievementsCard, ActivityCard, BadgeSticker, FollowUpsCard } from "@/components/dashboard/lists";
 import { StatsStrip } from "@/components/dashboard/stats-strip";
 import { Card, CardTitle, EmptyState } from "@/components/page-header";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { applicationsPhrase, streakPhrase } from "@/lib/arabic";
 import { STALE_AFTER_DAYS } from "@/lib/constants";
 import { formatDate, hourInAppTimeZone, todayISO, WEEKDAYS, weekdayIndex } from "@/lib/dates";
+import { goalCounts, goalTargets, goalWins } from "@/lib/goals";
 import {
   activityByDay,
   computeBadges,
@@ -117,7 +118,13 @@ export default async function DashboardPage() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-3 md:gap-6">
-        <WeeklyGoalCard count={thisWeek} goal={settings.weeklyGoal} days={week} />
+        <GoalsCard
+          goal={settings.goal}
+          counts={goalCounts(days, today)}
+          targets={goalTargets(settings.goal, today)}
+          wins={goalWins(days, settings.goal, today)}
+          days={week}
+        />
         <StreakCard current={streaks.current} best={streaks.best} activeToday={streaks.activeToday} />
         <QualityCard percent={quality.percent} tailored={quality.tailored} total={quality.total} />
       </div>

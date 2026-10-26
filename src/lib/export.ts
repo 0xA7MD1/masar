@@ -7,17 +7,22 @@ import {
   statusLabel,
   WORK_MODE_LABELS,
 } from "./constants";
+import type { Goal } from "./goals";
 
 export function toBackup(
   apps: Application[],
   history: StatusChange[],
-  settings: { weeklyGoal: number; displayName: string },
+  settings: { goal: Goal; displayName: string },
 ) {
   return {
     app: "masar" as const,
     version: 1 as const,
     exported_at: new Date().toISOString(),
-    settings: { weekly_goal: settings.weeklyGoal, display_name: settings.displayName },
+    settings: {
+      goal_period: settings.goal.period,
+      goal_target: settings.goal.target,
+      display_name: settings.displayName,
+    },
     applications: apps.map((a) => ({
       id: a.id,
       created_at: a.createdAt.toISOString(),
