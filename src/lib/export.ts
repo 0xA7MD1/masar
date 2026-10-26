@@ -36,6 +36,7 @@ export function toBackup(
       next_follow_up: a.nextFollowUp,
       priority: a.priority,
       notes: a.notes,
+      follow_up_url: a.followUpUrl,
     })),
     status_history: history.map((h) => ({
       id: h.id,
@@ -71,6 +72,7 @@ export function toCsv(apps: Application[]): string {
     "المتابعة القادمة",
     "الأولوية",
     "ملاحظات",
+    "رابط المتابعة",
     "أُنشئ في",
     "آخر تحديث",
   ];
@@ -90,6 +92,7 @@ export function toCsv(apps: Application[]): string {
     a.nextFollowUp,
     PRIORITY_META[a.priority].label,
     a.notes,
+    a.followUpUrl,
     a.createdAt.toISOString(),
     a.updatedAt.toISOString(),
   ]);

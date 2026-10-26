@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { CalendarClock, Lock } from "lucide-react";
 
+import { FollowUpLink } from "@/components/applications/follow-up-link";
 import { MarkGhostedButton } from "@/components/applications/mark-ghosted-button";
 import { Card, CardTitle } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badges";
 import type { Application } from "@/db/schema";
+import { primaryName, secondaryName } from "@/lib/application-name";
 import { daysPhrase, formatActivityTime } from "@/lib/dates";
 import { STATUS_META, statusLabel } from "@/lib/constants";
 import type { Badge } from "@/lib/metrics";
@@ -40,24 +42,27 @@ export function FollowUpsCard({
       ) : (
         <ul className="divide-y divide-line">
           {followUps.map(({ app, overdueDays }) => (
-            <li key={app.id}>
+            <li key={app.id} className="flex items-center gap-2">
               <Link
                 href={`/applications/${app.id}`}
-                className="-mx-2 flex items-center justify-between gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-cream/70"
+                className="-ms-2 flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-cream/70"
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold">{app.jobTitle}</span>
-                  <span className="block truncate text-sm text-ink-muted">{app.company}</span>
+                  <span className="block truncate font-semibold">{primaryName(app)}</span>
+                  {secondaryName(app) ? (
+                    <span className="block truncate text-sm text-ink-muted">{secondaryName(app)}</span>
+                  ) : null}
                 </span>
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
-                    overdueDays > 0 ? "bg-coral/10 text-coral" : "bg-sage text-teal-deep",
+                    overdueDays > 0 ? "bg-coral/10 text-coral" : "bg-brand-soft text-brand-deep",
                   )}
                 >
                   {overdueDays > 0 ? `متأخرة ${daysPhrase(overdueDays)}` : "اليوم"}
                 </span>
               </Link>
+              {app.followUpUrl ? <FollowUpLink href={app.followUpUrl} size="sm" /> : null}
             </li>
           ))}
         </ul>
@@ -73,8 +78,10 @@ export function FollowUpsCard({
             {stale.map(({ app, days }) => (
               <li key={app.id} className="flex flex-wrap items-center justify-between gap-2">
                 <Link href={`/applications/${app.id}`} className="min-w-0 text-sm hover:underline">
-                  <span className="font-medium">{app.jobTitle}</span>
-                  <span className="text-ink-muted"> · {app.company} · من {daysPhrase(days)}</span>
+                  <span className="font-medium">{primaryName(app)}</span>
+                  <span className="text-ink-muted">
+                    {secondaryName(app) ? ` · ${secondaryName(app)}` : ""} · من {daysPhrase(days)}
+                  </span>
                 </Link>
                 <MarkGhostedButton id={app.id} />
               </li>
@@ -113,9 +120,9 @@ export function ActivityCard({
                 <p className="leading-relaxed">
                   {item.fromStatus === null ? "أضفت " : "نقلت "}
                   <Link href={`/applications/${item.applicationId}`} className="font-semibold hover:underline">
-                    {item.jobTitle}
+                    {primaryName(item)}
                   </Link>
-                  <span className="text-ink-muted"> في {item.company}</span>
+                  {secondaryName(item) ? <span className="text-ink-muted"> في {secondaryName(item)}</span> : null}
                   {item.fromStatus === null ? (
                     <> بحالة «{statusLabel(item.toStatus, false)}»</>
                   ) : (
@@ -151,7 +158,7 @@ export function BadgeSticker({ badge, index, className }: { badge: Badge; index:
         aria-hidden="true"
         className={cn(
           "grid size-10 shrink-0 place-items-center rounded-xl text-xl",
-          badge.earned ? "bg-sage" : "bg-sand/80 grayscale",
+          badge.earned ? "bg-brand-soft" : "bg-sand/80 grayscale",
         )}
       >
         {badge.earned ? badge.emoji : <Lock className="size-4 text-ink-subtle" />}

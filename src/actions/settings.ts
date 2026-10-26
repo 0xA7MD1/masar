@@ -81,6 +81,7 @@ export async function importBackup(
           nextFollowUp: a.next_follow_up,
           priority: a.priority,
           notes: a.notes,
+          followUpUrl: a.follow_up_url,
         })),
       ),
     );

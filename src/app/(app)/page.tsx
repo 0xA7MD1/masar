@@ -67,10 +67,10 @@ export default async function DashboardPage() {
             {greeting(hourInAppTimeZone())}
             {name ? (
               <>
-                ، <span className="text-teal">{name}</span>
+                ، <span className="text-brand">{name}</span>
               </>
             ) : (
-              <span className="text-teal"> 👋</span>
+              <span className="text-brand"> 👋</span>
             )}
           </h1>
           <p className="mt-4 max-w-xl text-lg leading-relaxed text-ink-muted">{dailyLine(today)}</p>

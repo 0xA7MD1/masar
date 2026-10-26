@@ -30,6 +30,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { primaryName, secondaryName } from "@/lib/application-name";
 import { STATUS_KEYS, STATUS_META, statusLabel, type Priority, type Source, type Status } from "@/lib/constants";
 import { daysPhrase, relativeDays } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -85,7 +86,10 @@ export function KanbanBoard({ cards, today }: { cards: BoardCard[]; today: strin
   );
 
   const announcements: Announcements = {
-    onDragStart: ({ active }) => `مسكت «${byId.get(Number(active.id))?.jobTitle ?? ""}».`,
+    onDragStart: ({ active }) => {
+      const card = byId.get(Number(active.id));
+      return `مسكت «${card ? primaryName(card) : ""}».`;
+    },
     onDragOver: ({ over }) => (over ? `فوق عمود ${statusLabel(over.id as Status, false)}.` : "برا الأعمدة."),
     onDragEnd: ({ over }) =>
       over ? `انتقل إلى ${statusLabel(over.id as Status, false)}.` : "رجعت البطاقة لمكانها.",
@@ -203,7 +207,7 @@ function Column({
         ref={setNodeRef}
         className={cn(
           "flex min-h-[60vh] flex-1 flex-col gap-3 rounded-[20px] border-2 border-transparent bg-sand/45 p-2.5 transition-colors",
-          isOver && "border-teal/40 bg-sage/60",
+          isOver && "border-brand/40 bg-brand-soft/60",
         )}
       >
         {cards.map((card) => (
@@ -233,7 +237,7 @@ function DraggableCard({
     <article
       ref={setNodeRef}
       {...listeners}
-      aria-label={`${card.jobTitle} — ${card.company}`}
+      aria-label={[primaryName(card), secondaryName(card)].filter(Boolean).join(" — ")}
       className={cn("touch-manipulation", isDragging && "opacity-35")}
     >
       <CardBody card={card} today={today} onMove={onMove} />
@@ -265,11 +269,11 @@ function CardBody({
           draggable={false}
           className="min-w-0 rounded-md font-semibold leading-snug outline-offset-4 after:absolute after:inset-0 after:rounded-2xl hover:underline"
         >
-          {card.jobTitle}
+          {primaryName(card)}
         </Link>
         {onMove ? <MoveMenu card={card} onMove={onMove} /> : null}
       </div>
-      <p className="mt-0.5 truncate text-sm text-ink-muted">{card.company}</p>
+      {secondaryName(card) ? <p className="mt-0.5 truncate text-sm text-ink-muted">{secondaryName(card)}</p> : null}
       <div className="mt-3 flex items-center justify-between gap-2">
         <SourceBadge source={card.source} />
         <span className="flex items-center gap-2 text-xs text-ink-subtle">
@@ -295,7 +299,7 @@ function MoveMenu({ card, onMove }: { card: BoardCard; onMove: (id: number, stat
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label={`نقل «${card.jobTitle}» إلى حالة ثانية`}
+          aria-label={`نقل «${primaryName(card)}» إلى حالة ثانية`}
           className="relative z-10 -me-1 -mt-0.5 shrink-0"
           onMouseDown={stop}
           onTouchStart={stop}

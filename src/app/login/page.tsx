@@ -32,7 +32,7 @@ export default async function LoginPage({
         <div className="card-surface animate-rise-in relative p-8 sm:p-10">
           <Logo />
           <h1 className="display mt-8 text-4xl sm:text-5xl">
-            كل طلب خطوة على <span className="text-teal">مسارك</span>
+            كل طلب خطوة على <span className="text-brand">مسارك</span>
           </h1>
           <p className="mt-3 text-ink-muted">ادخل كلمة المرور وكمّل من حيث وقفت.</p>
           <LoginForm next={next} />

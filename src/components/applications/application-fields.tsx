@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 
+import { SourceBadge } from "@/components/status-badges";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -20,7 +21,9 @@ import {
   statusLabel,
   WORK_MODE_KEYS,
   WORK_MODE_LABELS,
+  type Source,
 } from "@/lib/constants";
+import { detectSource, linkHost } from "@/lib/links";
 import { cn } from "@/lib/utils";
 
 import { ChipGroup, DatePicker, Field, SelectField } from "./form-fields";
@@ -42,6 +45,7 @@ export type ApplicationDefaults = Partial<
     | "nextFollowUp"
     | "priority"
     | "notes"
+    | "followUpUrl"
   >
 >;
 
@@ -50,6 +54,9 @@ const JOB_TYPE_OPTIONS = JOB_TYPE_KEYS.map((value) => ({ value, label: JOB_TYPE_
 const WORK_MODE_OPTIONS = WORK_MODE_KEYS.map((value) => ({ value, label: WORK_MODE_LABELS[value] }));
 const PRIORITY_OPTIONS = PRIORITY_KEYS.map((value) => ({ value, label: PRIORITY_META[value].label }));
 const STATUS_OPTIONS = STATUS_KEYS.map((value) => ({ value, label: statusLabel(value) }));
+
+/** Fields always visible above "تفاصيل إضافية". */
+const MAIN_FIELDS = ["jobUrl", "source", "jobTitle", "company"];
 
 const invalid = (errors: FieldErrors, key: string) => (errors[key]?.length ? true : undefined);
 const describedBy = (errors: FieldErrors, id: string, key: string) =>
@@ -127,18 +134,24 @@ function DetailFields({
           aria-invalid={invalid(errors, "expectedSalary")}
         />
       </Field>
-      <Field label="رابط الوظيفة" htmlFor={id("jobUrl")} error={errors.jobUrl} className="sm:col-span-2">
+      <Field
+        label="رابط المتابعة"
+        htmlFor={id("followUpUrl")}
+        error={errors.followUpUrl}
+        hint="رقم واتساب، أو إيميل، أو أي رابط. يطلع لك زر «تابع» يوديك له على طول."
+        className="sm:col-span-2"
+      >
         <Input
-          id={id("jobUrl")}
-          name="jobUrl"
+          id={id("followUpUrl")}
+          name="followUpUrl"
           type="text"
-          inputMode="url"
           dir="ltr"
           className="text-start"
-          placeholder="https://"
-          defaultValue={defaults.jobUrl ?? ""}
-          aria-invalid={invalid(errors, "jobUrl")}
-          aria-describedby={describedBy(errors, id("jobUrl"), "jobUrl")}
+          autoComplete="off"
+          placeholder="05XXXXXXXX · hr@company.com · https://"
+          defaultValue={defaults.followUpUrl ?? ""}
+          aria-invalid={invalid(errors, "followUpUrl")}
+          aria-describedby={describedBy(errors, id("followUpUrl"), "followUpUrl")}
         />
       </Field>
       <Field label="موعد المتابعة" htmlFor={id("nextFollowUp")} error={errors.nextFollowUp} hint="نذكّرك فيه بالرئيسية.">
@@ -172,6 +185,99 @@ function DetailFields({
   );
 }
 
+/**
+ * The job link decides the source as it is typed. The pills only show when there
+ * is no link (WhatsApp, walk-in…), when asked for, or once a source was picked by hand.
+ */
+function LinkAndSource({
+  idPrefix,
+  defaults,
+  errors,
+  autoFocus,
+}: {
+  idPrefix: string;
+  defaults: ApplicationDefaults;
+  errors: FieldErrors;
+  autoFocus: boolean;
+}) {
+  const id = (name: string) => `${idPrefix}-${name}`;
+  const [jobUrl, setJobUrl] = useState(defaults.jobUrl ?? "");
+  // A saved source that the link would also give is treated as automatic.
+  const [manualSource, setManualSource] = useState<Source | null>(() =>
+    defaults.source && defaults.source !== detectSource(defaults.jobUrl) ? defaults.source : null,
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const detected = detectSource(jobUrl);
+  const source = manualSource ?? detected;
+  const showPicker = pickerOpen || manualSource !== null || !detected || Boolean(errors.source?.length);
+  const host = linkHost(jobUrl);
+
+  return (
+    <>
+      <Field
+        label="رابط الوظيفة"
+        htmlFor={id("jobUrl")}
+        error={errors.jobUrl}
+        hint="الصقه ونعرف الموقع لحالنا: LinkedIn، جدارات، Bayt، تنقيب، مرجان، صبار…"
+      >
+        <Input
+          id={id("jobUrl")}
+          name="jobUrl"
+          type="text"
+          inputMode="url"
+          dir="ltr"
+          className="text-start"
+          autoFocus={autoFocus}
+          autoComplete="off"
+          placeholder="https://"
+          value={jobUrl}
+          onChange={(event) => setJobUrl(event.target.value)}
+          aria-invalid={invalid(errors, "jobUrl")}
+          aria-describedby={describedBy(errors, id("jobUrl"), "jobUrl")}
+        />
+      </Field>
+
+      {showPicker ? (
+        <ChipGroup
+          name="source"
+          legend="من وين لقيت الوظيفة؟"
+          options={SOURCE_OPTIONS}
+          value={source}
+          onValueChange={setManualSource}
+          required={!detected}
+          error={errors.source}
+        >
+          {detected && !manualSource ? (
+            <p className="text-xs text-ink-subtle">اخترناه من الرابط، وتقدر تغيّره.</p>
+          ) : null}
+        </ChipGroup>
+      ) : (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-soft/60 px-4 py-3 text-sm"
+        >
+          <input type="hidden" name="source" value={detected ?? ""} />
+          <Check className="size-4 shrink-0 text-brand" aria-hidden="true" />
+          <span className="text-ink-muted">المصدر:</span>
+          <SourceBadge source={detected!} className="border-brand/20 bg-paper text-ink" />
+          {detected === "company_site" && host ? (
+            <span dir="ltr" className="truncate text-xs text-ink-subtle">
+              {host}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="ms-auto rounded-md text-xs font-medium text-brand underline-offset-4 hover:underline"
+          >
+            غيّره
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function ApplicationFields({
   idPrefix,
   defaults,
@@ -182,7 +288,7 @@ export function ApplicationFields({
   idPrefix: string;
   defaults: ApplicationDefaults;
   errors: FieldErrors;
-  /** Quick add hides everything except title, company and source. */
+  /** Quick add hides everything except the link, source, title and company. */
   collapsibleDetails?: boolean;
   autoFocus?: boolean;
 }) {
@@ -190,19 +296,18 @@ export function ApplicationFields({
   const id = (name: string) => `${idPrefix}-${name}`;
   // Errors inside the hidden section would be invisible, so open it for them.
   const hasDetailErrors = Object.entries(errors).some(
-    ([key, messages]) => !["jobTitle", "company", "source"].includes(key) && messages?.length,
+    ([key, messages]) => !MAIN_FIELDS.includes(key) && messages?.length,
   );
   const isOpen = detailsOpen || hasDetailErrors;
 
   return (
     <div className="space-y-5">
+      <LinkAndSource idPrefix={idPrefix} defaults={defaults} errors={errors} autoFocus={autoFocus} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="المسمى الوظيفي *" htmlFor={id("jobTitle")} error={errors.jobTitle}>
+        <Field label="المسمى الوظيفي" htmlFor={id("jobTitle")} error={errors.jobTitle}>
           <Input
             id={id("jobTitle")}
             name="jobTitle"
-            required
-            autoFocus={autoFocus}
             autoComplete="off"
             placeholder="مثلاً: Frontend Developer"
             defaultValue={defaults.jobTitle ?? ""}
@@ -210,11 +315,10 @@ export function ApplicationFields({
             aria-describedby={describedBy(errors, id("jobTitle"), "jobTitle")}
           />
         </Field>
-        <Field label="الشركة *" htmlFor={id("company")} error={errors.company}>
+        <Field label="الشركة" htmlFor={id("company")} error={errors.company}>
           <Input
             id={id("company")}
             name="company"
-            required
             autoComplete="organization"
             placeholder="مثلاً: Tamara"
             defaultValue={defaults.company ?? ""}
@@ -223,18 +327,10 @@ export function ApplicationFields({
           />
         </Field>
       </div>
-      <ChipGroup
-        name="source"
-        legend="من وين لقيت الوظيفة؟"
-        options={SOURCE_OPTIONS}
-        defaultValue={defaults.source}
-        required
-        error={errors.source}
-      />
 
       {collapsibleDetails ? (
         <Collapsible open={isOpen} onOpenChange={setDetailsOpen}>
-          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-2xl border border-dashed border-line px-4 py-3 text-sm font-medium text-ink-muted transition-colors hover:border-[#d6cdbd] hover:text-ink">
+          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-2xl border border-dashed border-line px-4 py-3 text-sm font-medium text-ink-muted transition-colors hover:border-line-strong hover:text-ink">
             تفاصيل إضافية
             <span className="flex items-center gap-2 text-xs text-ink-subtle">
               اختياري

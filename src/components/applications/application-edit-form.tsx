@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type { FieldErrors } from "@/lib/action-result";
+import { primaryName } from "@/lib/application-name";
 
 import { ApplicationFields, type ApplicationDefaults } from "./application-fields";
 
@@ -48,7 +49,7 @@ export function ApplicationEditForm({ id, defaults }: { id: number; defaults: Ap
     <form onSubmit={onSubmit} noValidate className="space-y-6">
       <ApplicationFields idPrefix="edit" defaults={defaults} errors={errors} />
       <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <DeleteApplicationButton id={id} title={defaults.jobTitle ?? ""} />
+        <DeleteApplicationButton id={id} title={primaryName({ jobTitle: defaults.jobTitle ?? "", company: defaults.company ?? "" })} />
         <Button type="submit" size="lg" disabled={saving}>
           {saving ? <Loader2 className="animate-spin" /> : <Save aria-hidden="true" />}
           احفظ التعديلات

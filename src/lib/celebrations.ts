@@ -1,3 +1,4 @@
+import { fullName } from "./application-name";
 import { streakPhrase } from "./arabic";
 import type { Status } from "./constants";
 import type { MotivationSnapshot } from "./metrics";
@@ -55,7 +56,7 @@ export function statusCelebration(
   to: Status,
   app: { jobTitle: string; company: string },
 ): Celebration | null {
-  const where = `${app.jobTitle} في ${app.company}`;
+  const where = fullName(app);
   switch (to) {
     case "interview":
       return { kind: "interview", emoji: "🎙️", title: "عندك مقابلة!", description: `${where} — جهّز نفسك، أنت قدّها.` };

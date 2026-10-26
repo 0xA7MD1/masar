@@ -14,7 +14,7 @@ export function StatsStrip({ items, className }: { items: StripItem[]; className
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-24 -start-24 size-64 rounded-full bg-teal/25 blur-3xl"
+        className="pointer-events-none absolute -top-24 -start-24 size-64 rounded-full bg-brand/25 blur-3xl"
       />
       <dl className="relative grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4 md:gap-0">
         {items.map((item, i) => (
@@ -23,7 +23,7 @@ export function StatsStrip({ items, className }: { items: StripItem[]; className
             <dd className="mt-2">
               <span dir="ltr" className="inline-flex items-baseline gap-0.5">
                 <span className="display text-5xl md:text-6xl">{item.value}</span>
-                {item.suffix ? <span className="text-2xl font-semibold text-teal-light">{item.suffix}</span> : null}
+                {item.suffix ? <span className="text-2xl font-semibold text-brand-light">{item.suffix}</span> : null}
               </span>
               {item.note ? <span className="mt-2 block text-xs text-cream/45">{item.note}</span> : null}
             </dd>

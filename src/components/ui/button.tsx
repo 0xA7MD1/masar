@@ -10,9 +10,9 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-ink text-cream shadow-[0_6px_18px_rgba(17,17,15,0.18)] hover:bg-[#262622] hover:shadow-[0_10px_24px_rgba(17,17,15,0.22)]",
-        teal: "bg-teal text-paper hover:bg-teal-deep",
+        brand: "bg-brand text-paper hover:bg-brand-deep",
         outline:
-          "border-line bg-paper/70 text-ink hover:border-[#d6cdbd] hover:bg-paper aria-expanded:bg-paper",
+          "border-line bg-paper/70 text-ink hover:border-line-strong hover:bg-paper aria-expanded:bg-paper",
         secondary:
           "bg-sand text-ink hover:bg-[#e2dccf] aria-expanded:bg-[#e2dccf]",
         ghost:
@@ -21,7 +21,7 @@ const buttonVariants = cva(
           "bg-destructive/10 text-destructive hover:bg-destructive/15 focus-visible:ring-destructive/20",
         "destructive-solid":
           "bg-destructive text-paper hover:bg-[#9a3826] focus-visible:ring-destructive/30",
-        link: "rounded-md px-0 text-teal underline-offset-4 hover:underline",
+        link: "rounded-md px-0 text-brand underline-offset-4 hover:underline",
       },
       size: {
         default:

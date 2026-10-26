@@ -7,6 +7,7 @@ import { Card, EmptyState, PageHeader } from "@/components/page-header";
 import { QuickAddButton } from "@/components/quick-add/quick-add-button";
 import { PriorityDot, SourceBadge, StatusBadge } from "@/components/status-badges";
 import type { Application } from "@/db/schema";
+import { primaryName, secondaryName } from "@/lib/application-name";
 import { applicationsPhrase } from "@/lib/arabic";
 import { CLOSED_STATUSES, JOB_TYPE_LABELS, WORK_MODE_LABELS } from "@/lib/constants";
 import { formatDate, formatShortDate, todayISO } from "@/lib/dates";
@@ -68,7 +69,7 @@ function FollowUpCell({ app, today }: { app: Application; today: string }) {
   if (!app.nextFollowUp || CLOSED_STATUSES.includes(app.status)) return <span className="text-ink-subtle">—</span>;
   const overdue = app.nextFollowUp < today;
   return (
-    <span className={cn("whitespace-nowrap", overdue ? "font-semibold text-coral" : app.nextFollowUp === today && "font-semibold text-teal")}>
+    <span className={cn("whitespace-nowrap", overdue ? "font-semibold text-coral" : app.nextFollowUp === today && "font-semibold text-brand")}>
       {app.nextFollowUp === today ? "اليوم" : formatShortDate(app.nextFollowUp)}
     </span>
   );
@@ -131,13 +132,13 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                   <tr key={app.id} className="transition-colors hover:bg-cream/50">
                     <td className="max-w-72 px-4 py-3.5">
                       <Link href={`/applications/${app.id}`} className="font-semibold hover:underline">
-                        {app.jobTitle}
+                        {primaryName(app)}
                       </Link>
                       <div className="mt-0.5 flex items-center gap-1.5 truncate text-ink-muted">
-                        {app.company}
+                        {secondaryName(app)}
                         {app.location ? <span className="text-ink-subtle">· {app.location}</span> : null}
                         {app.cvTailored ? (
-                          <Sparkles className="size-3.5 shrink-0 text-teal" aria-label="سيرة معدّلة" />
+                          <Sparkles className="size-3.5 shrink-0 text-brand" aria-label="سيرة معدّلة" />
                         ) : null}
                       </div>
                     </td>
@@ -170,8 +171,10 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                 <Link href={`/applications/${app.id}`} className="block px-4 py-4 active:bg-cream/60">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-semibold">{app.jobTitle}</p>
-                      <p className="truncate text-sm text-ink-muted">{app.company}</p>
+                      <p className="truncate font-semibold">{primaryName(app)}</p>
+                      {secondaryName(app) ? (
+                        <p className="truncate text-sm text-ink-muted">{secondaryName(app)}</p>
+                      ) : null}
                     </div>
                     <StatusBadge status={app.status} />
                   </div>

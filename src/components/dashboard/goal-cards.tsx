@@ -37,7 +37,7 @@ export function WeeklyGoalCard({
   const reached = count >= goal;
   return (
     <Card aria-labelledby="weekly-goal-title">
-      <CardLabel icon={<Target className="size-5 text-teal" aria-hidden="true" />}>
+      <CardLabel icon={<Target className="size-5 text-brand" aria-hidden="true" />}>
         <span id="weekly-goal-title">هدف الأسبوع</span>
       </CardLabel>
       <p className="mt-4 flex items-baseline gap-2">
@@ -55,7 +55,7 @@ export function WeeklyGoalCard({
         aria-valuenow={Math.min(count, goal)}
         aria-label="التقدّم نحو هدف الأسبوع"
       >
-        <Bar value={(count / goal) * 100} className={reached ? "bg-teal-deep" : "bg-teal"} />
+        <Bar value={(count / goal) * 100} className={reached ? "bg-brand-deep" : "bg-brand"} />
       </div>
       <ul className="mt-4 grid grid-cols-7 gap-1.5" aria-label="طلبات كل يوم هذا الأسبوع">
         {days.map((day, i) => (
@@ -63,7 +63,7 @@ export function WeeklyGoalCard({
             <span
               className={cn(
                 "grid h-8 w-full place-items-center rounded-lg text-xs font-semibold",
-                day.count > 0 ? "bg-teal text-paper" : day.isFuture ? "border border-dashed border-line" : "bg-sand/70",
+                day.count > 0 ? "bg-brand text-paper" : day.isFuture ? "border border-dashed border-line" : "bg-sand/70",
                 day.isToday && "ring-2 ring-ink ring-offset-2 ring-offset-paper",
               )}
             >
@@ -80,7 +80,7 @@ export function WeeklyGoalCard({
       </ul>
       <p className="mt-4 text-sm text-ink-muted">
         {reached ? (
-          <span className="font-semibold text-teal-deep">حققت هدفك 🎯 أي طلب زيادة بونص.</span>
+          <span className="font-semibold text-brand-deep">حققت هدفك 🎯 أي طلب زيادة بونص.</span>
         ) : (
           <>باقي {applicationsPhrase(goal - count)} وتحقق هدفك.</>
         )}
@@ -128,7 +128,7 @@ export function StreakCard({ current, best, activeToday }: { current: number; be
 export function QualityCard({ percent, tailored, total }: { percent: number; tailored: number; total: number }) {
   return (
     <Card aria-labelledby="quality-title">
-      <CardLabel icon={<Sparkles className="size-5 text-teal" aria-hidden="true" />}>
+      <CardLabel icon={<Sparkles className="size-5 text-brand" aria-hidden="true" />}>
         <span id="quality-title">جودة التقديم</span>
       </CardLabel>
       <p dir="ltr" className="mt-4 flex items-baseline justify-end gap-0.5">
@@ -143,7 +143,7 @@ export function QualityCard({ percent, tailored, total }: { percent: number; tai
         aria-valuenow={percent}
         aria-label="نسبة الطلبات بسيرة معدّلة"
       >
-        <Bar value={percent} className="bg-[linear-gradient(90deg,var(--sage),var(--teal-light))]" />
+        <Bar value={percent} className="bg-[linear-gradient(90deg,var(--brand-soft),var(--brand-light))]" />
       </div>
       <p className="mt-4 text-sm leading-relaxed text-ink-muted">
         عدّلت سيرتك في <span className="font-semibold text-ink">{tailored}</span> من{" "}

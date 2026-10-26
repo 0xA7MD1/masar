@@ -37,7 +37,7 @@ function CelebrationToast({ celebration }: { celebration: Celebration }) {
     >
       <span
         aria-hidden="true"
-        className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sage text-2xl"
+        className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-2xl"
       >
         {celebration.emoji}
       </span>

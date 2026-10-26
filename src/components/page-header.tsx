@@ -8,7 +8,7 @@ export function PageHeader({
   className,
 }: {
   title: string;
-  /** Word appended to the title in teal. */
+  /** Word appended to the title in brand. */
   highlight?: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
@@ -19,7 +19,7 @@ export function PageHeader({
       <div className="min-w-0">
         <h1 className="display text-4xl sm:text-5xl">
           {title}
-          {highlight ? <span className="text-teal"> {highlight}</span> : null}
+          {highlight ? <span className="text-brand"> {highlight}</span> : null}
         </h1>
         {description ? <p className="mt-3 max-w-2xl text-ink-muted">{description}</p> : null}
       </div>

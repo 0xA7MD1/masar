@@ -23,7 +23,7 @@ import { QuickAddForm } from "./quick-add-form";
 const QuickAddContext = createContext<{ openQuickAdd: () => void }>({ openQuickAdd: () => {} });
 
 const TITLE = "طلب جديد";
-const DESCRIPTION = "المسمى والشركة والمصدر وخلصت — الباقي اختياري.";
+const DESCRIPTION = "الصق رابط الوظيفة وخلصت — الباقي اختياري.";
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;

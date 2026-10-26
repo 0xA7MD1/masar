@@ -15,9 +15,9 @@ import {
 import { applicationsPhrase } from "@/lib/arabic";
 
 // Validated with the dataviz palette checker against the paper surface (#FFFDF7):
-// single-series teal, and a one-hue ordinal ramp for the funnel stages.
-export const CHART_TEAL = "#0E968A";
-export const CHART_TEAL_DEEP = "#00443C";
+// single-series brand, and a one-hue ordinal ramp for the funnel stages.
+export const CHART_BRAND = "#0E968A";
+export const CHART_BRAND_DEEP = "#00443C";
 export const FUNNEL_RAMP = ["#5DB5AA", "#2E968C", "#156C63", "#00443C"];
 const GRID = "#EAE5DA";
 const AXIS_TEXT = "#827B6F";
@@ -104,7 +104,7 @@ export function WeeklyChart({ data: points }: { data: WeekPoint[] }) {
           />
           <Bar dataKey="count" maxBarSize={24} radius={[4, 4, 0, 0]} isAnimationActive={false}>
             {data.map((point) => (
-              <Cell key={point.weekStart} fill={point.current ? CHART_TEAL_DEEP : CHART_TEAL} />
+              <Cell key={point.weekStart} fill={point.current ? CHART_BRAND_DEEP : CHART_BRAND} />
             ))}
             {/* Only the current week gets a direct label; the axis, tooltip and table carry the rest. */}
             <LabelList dataKey="currentCount" position="top" offset={6} fill="#11110F" fontSize={11} fontWeight={600} />
@@ -148,7 +148,7 @@ export function SourceResponseChart({ data }: { data: SourceRow[] }) {
               );
             }}
           />
-          <Bar dataKey="rate" fill={CHART_TEAL} maxBarSize={20} radius={[4, 0, 0, 4]} isAnimationActive={false}>
+          <Bar dataKey="rate" fill={CHART_BRAND} maxBarSize={20} radius={[4, 0, 0, 4]} isAnimationActive={false}>
             <LabelList
               dataKey="rate"
               content={(props) => <EndLabel props={props} text={`${(props as { value?: number }).value ?? 0}%`} />}

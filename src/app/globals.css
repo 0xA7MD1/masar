@@ -39,13 +39,14 @@
   --color-paper: var(--paper);
   --color-sand: var(--sand);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-ink-subtle: var(--ink-subtle);
-  --color-teal: var(--teal);
-  --color-teal-light: var(--teal-light);
-  --color-teal-deep: var(--teal-deep);
-  --color-sage: var(--sage);
+  --color-brand: var(--brand);
+  --color-brand-light: var(--brand-light);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
   --color-coral: var(--coral);
 
   --radius-sm: calc(var(--radius) * 0.6);
@@ -69,13 +70,14 @@
   --paper: #fffdf7;
   --sand: #eae5da;
   --line: #e5ded1;
+  --line-strong: #d6cdbd;
   --ink: #11110f;
   --ink-muted: #625d54;
   --ink-subtle: #827b6f;
-  --teal: #268f86;
-  --teal-light: #35b0a5;
-  --teal-deep: #00443c;
-  --sage: #d8e3d3;
+  --brand: #268f86;
+  --brand-light: #35b0a5;
+  --brand-deep: #00443c;
+  --brand-soft: #d8e3d3;
   --coral: #ff4f2f;
 
   --background: var(--cream);
@@ -90,16 +92,16 @@
   --secondary-foreground: var(--ink);
   --muted: var(--sand);
   --muted-foreground: var(--ink-muted);
-  --accent: var(--sage);
-  --accent-foreground: var(--teal-deep);
+  --accent: var(--brand-soft);
+  --accent-foreground: var(--brand-deep);
   --destructive: #b4432f;
   --border: var(--line);
   --input: var(--line);
-  --ring: var(--teal);
-  --chart-1: var(--teal);
-  --chart-2: var(--teal-light);
-  --chart-3: var(--teal-deep);
-  --chart-4: var(--sage);
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --chart-2: var(--brand-light);
+  --chart-3: var(--brand-deep);
+  --chart-4: var(--brand-soft);
   --chart-5: var(--coral);
   --radius: 0.875rem;
 }
@@ -140,11 +142,11 @@
     cursor: pointer;
   }
   ::selection {
-    background: var(--sage);
-    color: var(--teal-deep);
+    background: var(--brand-soft);
+    color: var(--brand-deep);
   }
   :focus-visible {
-    outline: 2px solid var(--teal);
+    outline: 2px solid var(--brand);
     outline-offset: 2px;
   }
   input[type="date"]::-webkit-calendar-picker-indicator {

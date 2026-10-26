@@ -90,7 +90,7 @@ export function BottomNav() {
                 <span
                   className={cn(
                     "grid h-7 w-12 place-items-center rounded-full transition-colors",
-                    active && "bg-sage text-teal-deep",
+                    active && "bg-brand-soft text-brand-deep",
                   )}
                 >
                   <Icon className="size-[18px]" aria-hidden="true" />

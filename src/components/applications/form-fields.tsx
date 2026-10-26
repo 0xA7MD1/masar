@@ -58,27 +58,40 @@ export type Option<T extends string> = { value: T; label: string };
 /**
  * Pill-shaped radio group built on native radios, so arrow keys work out of the box.
  * With `allowDeselect`, clicking the selected pill clears it.
+ * Pass `value` + `onValueChange` to control it from outside.
  */
 export function ChipGroup<T extends string>({
   name,
   legend,
   options,
   defaultValue,
+  value: controlledValue,
+  onValueChange,
   allowDeselect = false,
   error,
   required,
   size = "default",
+  children,
 }: {
   name: string;
   legend: string;
   options: readonly Option<T>[];
   defaultValue?: T | null;
+  value?: T | null;
+  onValueChange?: (value: T | null) => void;
   allowDeselect?: boolean;
   error?: string[];
   required?: boolean;
   size?: "default" | "sm";
+  /** Shown under the pills, e.g. a hint about how the value was picked. */
+  children?: React.ReactNode;
 }) {
-  const [value, setValue] = useState<T | null>(defaultValue ?? null);
+  const [internalValue, setInternalValue] = useState<T | null>(defaultValue ?? null);
+  const value = controlledValue !== undefined ? controlledValue : internalValue;
+  const setValue = (next: T | null) => {
+    if (controlledValue === undefined) setInternalValue(next);
+    onValueChange?.(next);
+  };
   const errorId = useId();
 
   return (
@@ -96,7 +109,7 @@ export function ChipGroup<T extends string>({
           <label
             key={option.value}
             className={cn(
-              "inline-flex cursor-pointer items-center rounded-full border border-line bg-paper text-ink-muted transition-colors select-none hover:border-[#d6cdbd] hover:text-ink",
+              "inline-flex cursor-pointer items-center rounded-full border border-line bg-paper text-ink-muted transition-colors select-none hover:border-line-strong hover:text-ink",
               "has-checked:border-ink has-checked:bg-ink has-checked:text-cream",
               "has-focus-visible:ring-3 has-focus-visible:ring-ring/30",
               size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-3.5 text-sm",
@@ -118,6 +131,7 @@ export function ChipGroup<T extends string>({
           </label>
         ))}
       </div>
+      {children}
       <FieldError id={errorId} messages={error} />
     </fieldset>
   );
@@ -225,7 +239,7 @@ export function DatePicker({
             data-invalid={ariaInvalid || undefined}
             aria-describedby={ariaDescribedBy}
             className={cn(
-              "flex w-full items-center justify-between gap-2 rounded-xl border border-input bg-paper px-3.5 text-start text-sm transition-colors outline-none hover:border-[#d6cdbd] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20 data-invalid:border-destructive data-invalid:ring-3 data-invalid:ring-destructive/20",
+              "flex w-full items-center justify-between gap-2 rounded-xl border border-input bg-paper px-3.5 text-start text-sm transition-colors outline-none hover:border-line-strong focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20 data-invalid:border-destructive data-invalid:ring-3 data-invalid:ring-destructive/20",
               size === "sm" ? "h-9" : "h-11",
             )}
           >

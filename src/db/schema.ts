@@ -37,6 +37,8 @@ export const applications = sqliteTable(
     nextFollowUp: text("next_follow_up"),
     priority: text("priority", { enum: PRIORITY_KEYS }).notNull().default("medium"),
     notes: text("notes"),
+    /** WhatsApp chat, mail search or any page to open when following up. */
+    followUpUrl: text("follow_up_url"),
   },
   (t) => [
     index("applications_status_idx").on(t.status),

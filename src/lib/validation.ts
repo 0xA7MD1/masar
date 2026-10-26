@@ -8,11 +8,7 @@ import {
   WORK_MODE_KEYS,
 } from "./constants";
 import { ISO_DATE_RE } from "./dates";
-
-/** Phones with an Arabic keyboard type ٠١٢ or ۰۱۲; store Western digits. */
-export function toWesternDigits(value: string): string {
-  return value.replace(/[٠-٩۰-۹]/g, (d) => String(d.charCodeAt(0) & 0xf));
-}
+import { detectSource, toFollowUpUrl, toWesternDigits } from "./links";
 
 const blankToNull = (value: unknown) =>
   value === undefined || (typeof value === "string" && value.trim() === "") ? null : value;
@@ -52,18 +48,26 @@ const checkbox = z.preprocess(
 export const statusSchema = z.enum(STATUS_KEYS, { error: "حالة غير معروفة" });
 export const idSchema = z.coerce.number().int().positive();
 
-export const applicationSchema = z.object({
-  jobTitle: z
-    .string({ error: "اكتب المسمى الوظيفي" })
-    .trim()
-    .min(1, "اكتب المسمى الوظيفي")
-    .max(160, "المسمى طويل جداً"),
-  company: z
-    .string({ error: "اكتب اسم الشركة" })
-    .trim()
-    .min(1, "اكتب اسم الشركة")
-    .max(160, "اسم الشركة طويل جداً"),
-  source: z.enum(SOURCE_KEYS, { error: "اختر مصدر الوظيفة" }),
+/** Optional, but stored as "" (not null) so the columns stay NOT NULL. */
+const optionalName = (tooLong: string) =>
+  z.preprocess((value) => value ?? "", z.string().trim().max(160, tooLong));
+
+/** Accepts a URL, a phone number (→ WhatsApp) or an email (→ Gmail search). */
+const followUpUrl = z.preprocess(
+  (value) => {
+    const v = blankToNull(value);
+    return typeof v === "string" ? (toFollowUpUrl(v) ?? false) : v;
+  },
+  z
+    .string({ error: "حط رابط، أو رقم جوال، أو إيميل" })
+    .max(2048)
+    .nullable(),
+);
+
+const applicationFields = z.object({
+  jobTitle: optionalName("المسمى طويل جداً"),
+  company: optionalName("اسم الشركة طويل جداً"),
+  source: z.preprocess(blankToNull, z.enum(SOURCE_KEYS).nullable()),
   jobType: z.preprocess(blankToNull, z.enum(JOB_TYPE_KEYS).nullable()),
   workMode: z.preprocess(blankToNull, z.enum(WORK_MODE_KEYS).nullable()),
   location: optionalText(120),
@@ -76,6 +80,19 @@ export const applicationSchema = z.object({
   nextFollowUp: optionalDate,
   priority: z.preprocess(blankToUndefined, z.enum(PRIORITY_KEYS).default("medium")),
   notes: optionalText(5000),
+  followUpUrl,
+});
+
+/** Without a picked source, the job link decides it (the form does the same live). */
+export const applicationSchema = applicationFields.transform((values, ctx) => {
+  const source = values.source ?? detectSource(values.jobUrl);
+  if (!source) {
+    ctx.addIssue({ code: "custom", path: ["source"], message: "حط رابط الوظيفة أو اختر من وين لقيتها" });
+    return z.NEVER;
+  }
+  // A WhatsApp job link is also where the follow-up happens.
+  const followUpUrl = values.followUpUrl ?? (source === "whatsapp" ? values.jobUrl : null);
+  return { ...values, source, followUpUrl };
 });
 
 export type ApplicationValues = z.output<typeof applicationSchema>;
@@ -120,8 +137,8 @@ export const backupSchema = z.object({
         id: z.number().int().positive(),
         created_at: timestamp,
         updated_at: timestamp,
-        job_title: z.string().trim().min(1).max(160),
-        company: z.string().trim().min(1).max(160),
+        job_title: z.string().trim().max(160),
+        company: z.string().trim().max(160),
         source: z.enum(SOURCE_KEYS),
         job_type: z.enum(JOB_TYPE_KEYS).nullish().transform((v) => v ?? null),
         work_mode: z.enum(WORK_MODE_KEYS).nullish().transform((v) => v ?? null),
@@ -138,6 +155,7 @@ export const backupSchema = z.object({
           .transform((v) => v ?? null),
         priority: z.enum(PRIORITY_KEYS),
         notes: nullableText(5000),
+        follow_up_url: nullableText(2048),
       }),
     )
     .max(10_000),
