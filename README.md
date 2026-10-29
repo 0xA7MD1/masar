@@ -1,6 +1,6 @@
 # مسار — Masar
 
-A private, single-user job application tracker. Log every application in under 30 seconds, move it through a Kanban pipeline, and stay motivated with streaks, weekly goals, milestones and a little confetti.
+A multi-user job application tracker; every account sees only its own data. Log every application in under 30 seconds, move it through a Kanban pipeline, and stay motivated with streaks, weekly goals, milestones and a little confetti.
 
 The whole UI is Arabic and right-to-left.
 
@@ -12,107 +12,86 @@ The whole UI is Arabic and right-to-left.
 - **Quick add**: modal on desktop, bottom sheet on mobile. Press `N` anywhere to open it.
 - **Details**: edit every field, see the status timeline, delete with confirmation.
 - **Stats** (Recharts): applications per week, response rate by source, hiring funnel, tech vs non-tech split, average days to first response.
-- **Settings**: weekly goal, display name, JSON/CSV export, JSON restore, logout.
+- **Settings**: daily, weekly or monthly goal, display name, JSON/CSV export, JSON restore, sign out.
 - **PWA**: installable, with an offline fallback page.
 
 ## Tech stack
 
 - Next.js 15 (App Router, Server Components, Server Actions), TypeScript
-- SQLite on [Turso](https://turso.tech) (libSQL) with Drizzle ORM
-- Tailwind CSS v4 + shadcn/ui (RTL mode)
-- `jose` signed session cookie, `zod` validation, Recharts, dnd-kit, canvas-confetti
+- Postgres on [Supabase](https://supabase.com) with Drizzle ORM (`postgres-js`, transaction pooler, `prepare: false`)
+- [Clerk](https://clerk.com) for sign-in and sign-up, in Arabic (`@clerk/localizations` `ar-SA`)
+- TanStack Query for server data: server components prefetch and hydrate, mutations call the server actions and invalidate the cache (optimistic on the kanban drag)
+- Zustand for UI state only (quick add, filters, celebrations)
+- Tailwind CSS v4 + shadcn/ui (RTL mode), `zod`, Recharts, dnd-kit, canvas-confetti
 
 ## Environment variables
 
+Copy `.env.example` to `.env` and fill it in. The same names go in Vercel.
+
 | Variable | Required | Description |
 | --- | --- | --- |
-| `TURSO_DATABASE_URL` | In production | Turso database URL, e.g. `libsql://masar-<org>.turso.io`. Leave empty locally to use `file:local.db`. |
-| `TURSO_AUTH_TOKEN` | In production | Turso auth token for the database. |
-| `APP_PASSWORD` | Yes | The single password that unlocks the app. |
-| `SESSION_SECRET` | Yes | At least 32 random characters used to sign the session cookie. |
-| `NEXT_PUBLIC_APP_TIMEZONE` | No | Timezone for "today", streaks and weeks. Defaults to `Asia/Riyadh`. |
-
-Generate a session secret:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
-```
-
-Changing `SESSION_SECRET` signs out every device.
+| `DATABASE_URL` | Yes | Supabase **transaction pooler** connection string (port 6543). |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key. |
+| `CLERK_SECRET_KEY` | Yes | Clerk secret key. |
+| `CRON_SECRET` | In production | Guards `/api/cron/keepalive`; Vercel Cron sends it as a bearer token. |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | Only for the import | The old Turso database, read by `pnpm db:import-turso`. |
+| `NEXT_PUBLIC_APP_TIMEZONE` | No | Timezone for "today", streaks and goals. Defaults to `Asia/Riyadh`. |
 
 ## Local development
 
 ```bash
 pnpm install
-cp .env.example .env.local   # then set APP_PASSWORD and SESSION_SECRET
-pnpm db:migrate              # creates local.db
-pnpm db:seed                 # optional: 10 realistic sample applications
+cp .env.example .env         # then fill in the values
+pnpm db:migrate
 pnpm dev
 ```
 
-Open http://localhost:3000 and sign in with `APP_PASSWORD`.
+Open http://localhost:3000 and sign up. To fill your account with 10 sample applications:
 
-The local SQLite file is only a development fallback. In production (on Vercel) the app refuses to start without `TURSO_DATABASE_URL`, because Vercel's filesystem is ephemeral.
+```bash
+pnpm db:seed --user <your Clerk user id>
+```
 
-## Creating a Turso database
+The seed replaces that user's data only.
 
-1. Install the Turso CLI and sign in:
+## Data isolation
 
-   ```bash
-   curl -sSfL https://get.tur.so/install.sh | bash
-   turso auth login
-   ```
+Every table has a `user_id` (the Clerk user id). Every query, server action and the export route filter by the signed-in user; an id that belongs to someone else behaves like a missing row. `settings` is one row per user, created on the first visit.
 
-   On Windows, use WSL or `scoop install turso`.
+RLS is enabled on every table with no policies, so Supabase's public Data API cannot read them; the app's own connection owns the tables and is not affected.
 
-2. Create the database and read its URL:
-
-   ```bash
-   turso db create masar
-   turso db show masar --url
-   ```
-
-3. Create an auth token:
-
-   ```bash
-   turso db tokens create masar
-   ```
-
-4. Put the URL and token in `.env.local` (to run migrations from your machine) and in your Vercel project settings.
+`pnpm test:isolation` proves it: two users on an in-memory Postgres (PGlite, with the real migrations) go through every read, write, import and export path and never see or change each other's rows.
 
 ## Migrations
 
 The schema lives in `src/db/schema.ts`; generated SQL migrations live in `drizzle/`.
 
 ```bash
-pnpm db:migrate     # apply migrations to the database in TURSO_DATABASE_URL (or local.db)
+pnpm db:migrate     # apply migrations to DATABASE_URL
 pnpm db:generate    # after editing schema.ts, generate a new migration
 pnpm db:studio      # browse the data with Drizzle Studio
 ```
 
-To migrate the production database, run `pnpm db:migrate` with the Turso variables set in `.env.local` (or in your shell).
+## Moving the old Turso data
 
-`pnpm db:seed` deletes all data before inserting the samples, so it refuses to run against a remote database unless you pass `--force`.
+`scripts/import-turso.ts` copies the old single-user Turso database into Supabase under one Clerk user. Turso is only read.
+
+```bash
+pnpm db:import-turso --user <Clerk user id>            # dry run: shows the counts
+pnpm db:import-turso --user <Clerk user id> --write    # imports
+```
+
+It refuses to overwrite a user who already has data unless you add `--replace`.
 
 ## Deploying to Vercel
 
-1. Create the Turso database and run `pnpm db:migrate` against it (see above).
-2. Push this project to a Git repository and import it in Vercel. The framework preset is detected as Next.js; keep the default build command (`pnpm build`).
-3. In **Project Settings → Environment Variables**, add `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `APP_PASSWORD` and `SESSION_SECRET`.
-4. Deploy. Visit the site, sign in, and install it from the browser menu ("Add to Home Screen" on iOS).
-
-To apply migrations automatically on each deploy, set the build command to `pnpm db:migrate && pnpm build`.
-
-## Security notes
-
-- Every route except `/login` and static assets is protected by `src/middleware.ts`; every server action and the export route re-check the session.
-- The session is an HS256 JWT (`jose`) in an `httpOnly`, `secure` (in production), `sameSite=lax` cookie that expires after 30 days.
-- Failed logins are counted per client IP in the `login_attempts` table: 5 failures within 15 minutes lock that IP out for 15 minutes.
-- The password comparison is constant-time.
+1. Run `pnpm db:migrate` against the Supabase database.
+2. In **Project Settings → Environment Variables**, add `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` and `CRON_SECRET`.
+3. Deploy. `vercel.json` schedules `/api/cron/keepalive` once a day, so the Supabase free tier never pauses for inactivity.
 
 ## Backups
 
-Settings → **تصدير JSON** downloads a complete backup (applications, status history and settings). **استيراد من JSON** replaces all current data with a backup, in a single transaction. CSV export is for spreadsheets and cannot be imported.
+Settings → **تصدير JSON** downloads a complete backup of your own data (applications, status history and settings). **استيراد من JSON** replaces your data (and only yours) with a backup, in a single transaction. CSV export is for spreadsheets and cannot be imported.
 
 ## Scripts
 
@@ -121,9 +100,11 @@ Settings → **تصدير JSON** downloads a complete backup (applications, stat
 | `pnpm dev` | Start the dev server (Turbopack) |
 | `pnpm build` / `pnpm start` | Production build and server |
 | `pnpm lint` / `pnpm typecheck` | ESLint and TypeScript checks |
+| `pnpm test:isolation` | Prove two users can't see or change each other's data |
 | `pnpm db:generate` | Generate a migration from `src/db/schema.ts` |
 | `pnpm db:migrate` | Apply migrations |
-| `pnpm db:seed` | Replace local data with sample applications |
+| `pnpm db:seed --user <id>` | Replace one user's data with sample applications |
+| `pnpm db:import-turso --user <id>` | Copy the old Turso data to one user |
 | `pnpm db:studio` | Open Drizzle Studio |
 | `node scripts/generate-icons.mjs` | Re-render the PWA icons from the logo |
 
@@ -131,17 +112,19 @@ Settings → **تصدير JSON** downloads a complete backup (applications, stat
 
 ```
 src/
-  actions/           server actions (applications, settings, backup)
+  actions/           server actions: mutations, plus read actions used as TanStack Query fetchers
   app/
-    (app)/           authenticated pages: dashboard, board, applications, stats, settings
-    api/export/      JSON and CSV export
-    login/           login page and action
-    manifest.ts      PWA manifest
-  components/        UI; components/ui holds the shadcn/ui primitives
-  db/                Drizzle schema and client
-  lib/               constants, dates, metrics, queries, validation, auth
-  middleware.ts      route protection
-drizzle/             SQL migrations
-scripts/             migrate, seed, icon generation
+    (app)/           signed-in pages; the layout prefetches the shared data
+    api/export/      JSON and CSV export of the signed-in user's data
+    api/cron/        keepalive cron
+    sign-in/, sign-up/  Clerk pages
+  components/        UI; each page has a client view that reads the query cache
+  db/                Drizzle schema, client, backup restore
+  hooks/             TanStack Query hooks (queries and mutations)
+  lib/               constants, dates, metrics, queries, query keys, validation
+  stores/            Zustand UI stores
+  middleware.ts      Clerk route protection
+drizzle/             SQL migrations (Postgres)
+scripts/             migrate, seed, Turso import, isolation check, icon generation
 public/              icons, service worker, offline page
 ```
