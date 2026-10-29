@@ -13,7 +13,7 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 /**
- * Called once a day by Vercel Cron so the Supabase free tier never pauses for inactivity.
+ * Called every 5 days by Vercel Cron so the Supabase free tier never pauses for inactivity.
  * Vercel sends `Authorization: Bearer $CRON_SECRET` when that variable is set.
  */
 export async function GET(request: NextRequest) {

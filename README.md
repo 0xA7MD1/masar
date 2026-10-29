@@ -87,7 +87,7 @@ It refuses to overwrite a user who already has data unless you add `--replace`.
 
 1. Run `pnpm db:migrate` against the Supabase database.
 2. In **Project Settings → Environment Variables**, add `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` and `CRON_SECRET`.
-3. Deploy. `vercel.json` schedules `/api/cron/keepalive` once a day, so the Supabase free tier never pauses for inactivity.
+3. Deploy. `vercel.json` schedules `/api/cron/keepalive` every 5 days, so the Supabase free tier never pauses for inactivity.
 
 ## Backups
 
