@@ -5,9 +5,10 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 import { ApplicationDetailView } from "@/components/applications/application-detail-view";
 import { primaryName, secondaryName } from "@/lib/application-name";
-import { getApplicationDetail } from "@/lib/queries";
+import { getApplicationDetail } from "@/lib/data/reads";
 import { makeQueryClient } from "@/lib/query-client";
 import { queryKeys } from "@/lib/query-keys";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { requireUserId } from "@/lib/user";
 import { idSchema } from "@/lib/validation";
 
@@ -17,7 +18,8 @@ type Props = { params: Promise<{ id: string }> };
 const load = cache(async (rawId: string) => {
   const parsed = idSchema.safeParse(rawId);
   if (!parsed.success) notFound();
-  const detail = await getApplicationDetail(await requireUserId(), parsed.data);
+  await requireUserId();
+  const detail = await getApplicationDetail(await createServerSupabase(), parsed.data);
   // Another user's application is "not found" too.
   if (!detail) notFound();
   return detail;

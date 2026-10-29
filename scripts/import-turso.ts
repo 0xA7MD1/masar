@@ -42,10 +42,10 @@ async function main() {
   }
   const write = process.argv.includes("--write");
 
-  const { count, eq } = await import("drizzle-orm");
+  const { count, eq, sql } = await import("drizzle-orm");
   const { createDb } = await import("../src/db/client");
-  const { replaceUserData } = await import("../src/db/replace-user-data");
   const { applications, statusHistory } = await import("../src/db/schema");
+  const { toImportPayload } = await import("../src/lib/backup-payload");
   const { backupSchema } = await import("../src/lib/validation");
 
   const source = await readTurso();
@@ -118,7 +118,15 @@ async function main() {
       return;
     }
 
-    const result = await replaceUserData(db, userId, data);
+    // The same import_backup function the app's restore uses, run as that user: it reads the
+    // owner from the token claims, which this connection sets for the one transaction.
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId })}, true)`);
+      const [row] = await tx.execute<{ result: { applications: number; history: number } }>(
+        sql`select public.import_backup(${JSON.stringify(toImportPayload(data))}::jsonb) as result`,
+      );
+      return row.result;
+    });
     const after = await countFor();
     console.log(`Imported ${result.applications} applications and ${result.history} status changes.`);
     console.log(`Supabase, ${userId} now has: ${after.apps} applications, ${after.history} status changes.`);

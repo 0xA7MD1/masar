@@ -2,8 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getDb } from "@/db";
-import { settings } from "@/db/schema";
+import { createSupabase } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +22,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // A real read on a real table, so the database counts it as activity.
-  const rows = await getDb().select({ userId: settings.userId }).from(settings).limit(1);
-  return NextResponse.json({ ok: true, rows: rows.length, at: new Date().toISOString() });
+  // A real read on a real table through the Data API, so Supabase counts it as activity.
+  // No user here: keepalive() is the one function the anon role may call.
+  const { data, error } = await createSupabase(async () => null).rpc("keepalive");
+  if (error) {
+    return NextResponse.json({ ok: false, error: error.message }, { status: 502 });
+  }
+  return NextResponse.json({ ok: true, rows: data, at: new Date().toISOString() });
 }

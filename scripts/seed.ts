@@ -184,7 +184,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { eq } = await import("drizzle-orm");
+  const { eq, sql } = await import("drizzle-orm");
   const { createDb } = await import("../src/db/client");
   const { applications, settings, statusHistory } = await import("../src/db/schema");
   const { addDays, todayISO } = await import("../src/lib/dates");
@@ -196,6 +196,8 @@ async function main() {
     new Date(`${addDays(today, -daysAgo)}T07:00:00.000Z`).getTime() + hourOffset * 3_600_000;
 
   await db.transaction(async (tx) => {
+    // Each sample writes its own status path, so the history trigger stays out of the way.
+    await tx.execute(sql`select set_config('masar.skip_history', 'on', true)`);
     // History goes with the applications through ON DELETE CASCADE.
     await tx.delete(applications).where(eq(applications.userId, userId));
     const profile = { goalPeriod: "week" as const, goalTarget: 10, displayName: "أحمد" };

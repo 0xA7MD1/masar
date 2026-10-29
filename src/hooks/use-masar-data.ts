@@ -2,33 +2,49 @@
 
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
-import { createApplication, deleteApplication, updateApplication, updateApplicationStatus } from "@/actions/applications";
-import { fetchApplicationDetail, fetchApplications, fetchHistory, fetchSettings } from "@/actions/data";
-import { importBackup, updateSettings } from "@/actions/settings";
+import { useSupabase } from "@/components/providers/supabase-provider";
 import type { Application } from "@/db/schema";
 import type { Status } from "@/lib/constants";
+import {
+  appliedDateAfterMove,
+  createApplication,
+  deleteApplication,
+  importBackup,
+  updateApplication,
+  updateApplicationStatus,
+  updateSettings,
+} from "@/lib/data/mutations";
+import { getApplicationDetail, getSettings, listApplications, listHistory } from "@/lib/data/reads";
 import { todayISO } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
 
-// Queries are prefetched by server components and hydrated, so these never suspend on first paint.
+// Everything here talks to Supabase from the browser with the user's Clerk token. Queries are
+// prefetched by server components and hydrated, so these never suspend on first paint.
 
 export function useApplications() {
-  return useSuspenseQuery({ queryKey: queryKeys.applications, queryFn: () => fetchApplications() }).data;
+  const supabase = useSupabase();
+  return useSuspenseQuery({ queryKey: queryKeys.applications, queryFn: () => listApplications(supabase) }).data;
 }
 
 export function useHistory() {
-  return useSuspenseQuery({ queryKey: queryKeys.history, queryFn: () => fetchHistory() }).data;
+  const supabase = useSupabase();
+  return useSuspenseQuery({ queryKey: queryKeys.history, queryFn: () => listHistory(supabase) }).data;
 }
 
 export function useSettings() {
-  return useSuspenseQuery({ queryKey: queryKeys.settings, queryFn: () => fetchSettings() }).data;
+  const supabase = useSupabase();
+  return useSuspenseQuery({ queryKey: queryKeys.settings, queryFn: () => getSettings(supabase) }).data;
 }
 
 export function useApplicationDetail(id: number) {
-  return useSuspenseQuery({ queryKey: queryKeys.application(id), queryFn: () => fetchApplicationDetail(id) }).data;
+  const supabase = useSupabase();
+  return useSuspenseQuery({
+    queryKey: queryKeys.application(id),
+    queryFn: () => getApplicationDetail(supabase, id),
+  }).data;
 }
 
-/** Thrown from mutations whose server action answered `{ ok: false }`, so rollbacks run. */
+/** Thrown from mutations that answered `{ ok: false }`, so rollbacks run. */
 export class ActionError extends Error {}
 
 function useInvalidateApplications() {
@@ -42,9 +58,10 @@ function useInvalidateApplications() {
 }
 
 export function useCreateApplication() {
+  const supabase = useSupabase();
   const invalidate = useInvalidateApplications();
   return useMutation({
-    mutationFn: (formData: FormData) => createApplication(formData),
+    mutationFn: (formData: FormData) => createApplication(supabase, formData),
     onSuccess: (result) => {
       if (result.ok) void invalidate();
     },
@@ -52,9 +69,10 @@ export function useCreateApplication() {
 }
 
 export function useUpdateApplication(id: number) {
+  const supabase = useSupabase();
   const invalidate = useInvalidateApplications();
   return useMutation({
-    mutationFn: (formData: FormData) => updateApplication(id, formData),
+    mutationFn: (formData: FormData) => updateApplication(supabase, id, formData),
     onSuccess: (result) => {
       if (result.ok) void invalidate();
     },
@@ -63,11 +81,12 @@ export function useUpdateApplication(id: number) {
 
 /** Status change with an optimistic update, used by the kanban drag and the quick actions. */
 export function useMoveApplication() {
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
   const invalidate = useInvalidateApplications();
   return useMutation({
     mutationFn: async ({ id, status }: { id: number; status: Status }) => {
-      const result = await updateApplicationStatus(id, status);
+      const result = await updateApplicationStatus(supabase, id, status);
       if (!result.ok) throw new ActionError(result.error);
       return result.data;
     },
@@ -81,8 +100,7 @@ export function useMoveApplication() {
             ? {
                 ...app,
                 status,
-                // Same rule as the server: a bookmark moved into the pipeline was applied today.
-                appliedDate: app.status === "saved" && status !== "saved" ? today : app.appliedDate,
+                appliedDate: appliedDateAfterMove(app, status, today),
                 updatedAt: new Date(),
               }
             : app,
@@ -98,10 +116,11 @@ export function useMoveApplication() {
 }
 
 export function useDeleteApplication() {
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
   const invalidate = useInvalidateApplications();
   return useMutation({
-    mutationFn: (id: number) => deleteApplication(id),
+    mutationFn: (id: number) => deleteApplication(supabase, id),
     onSuccess: (result, id) => {
       if (!result.ok) return;
       queryClient.setQueryData<Application[]>(queryKeys.applications, (apps) => apps?.filter((app) => app.id !== id));
@@ -111,9 +130,10 @@ export function useDeleteApplication() {
 }
 
 export function useUpdateSettings() {
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (formData: FormData) => updateSettings(formData),
+    mutationFn: (formData: FormData) => updateSettings(supabase, formData),
     onSuccess: (result) => {
       if (result.ok) void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     },
@@ -121,9 +141,10 @@ export function useUpdateSettings() {
 }
 
 export function useImportBackup() {
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: unknown) => importBackup(data),
+    mutationFn: (data: unknown) => importBackup(supabase, data),
     onSuccess: (result) => {
       if (result.ok) void queryClient.invalidateQueries({ queryKey: queryKeys.all });
     },
