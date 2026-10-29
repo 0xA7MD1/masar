@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { createApplication } from "@/actions/applications";
 import { ApplicationFields } from "@/components/applications/application-fields";
-import { useCelebrate } from "@/components/celebrate/celebration-provider";
+import { useCelebrate } from "@/components/celebrate/celebration-host";
 import { Button } from "@/components/ui/button";
+import { useCreateApplication } from "@/hooks/use-masar-data";
 import type { FieldErrors } from "@/lib/action-result";
 import { todayISO } from "@/lib/dates";
 
 export function QuickAddForm({ onDone }: { onDone: () => void }) {
   const router = useRouter();
   const celebrate = useCelebrate();
-  const [pending, startTransition] = useTransition();
+  const { mutateAsync: createApplication, isPending: pending } = useCreateApplication();
   const [errors, setErrors] = useState<FieldErrors>({});
   // Computed when the form mounts (i.e. when the sheet opens), so it is always today.
   const [today] = useState(todayISO);
@@ -23,8 +23,7 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    startTransition(async () => {
-      const result = await createApplication(formData);
+    void createApplication(formData).then((result) => {
       if (!result.ok) {
         setErrors(result.fieldErrors ?? {});
         toast.error(result.error);

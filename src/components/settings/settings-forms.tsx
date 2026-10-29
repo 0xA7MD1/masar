@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { Download, FileJson, Loader2, LogOut, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { importBackup, logout, updateSettings } from "@/actions/settings";
 import { Field } from "@/components/applications/form-fields";
 import {
   AlertDialog,
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useImportBackup, useUpdateSettings } from "@/hooks/use-masar-data";
 import type { FieldErrors } from "@/lib/action-result";
 import { applicationsPhrase } from "@/lib/arabic";
 import { GOAL_PERIOD_KEYS, type GoalPeriod } from "@/lib/constants";
@@ -25,6 +27,7 @@ import { todayISO } from "@/lib/dates";
 import { GOAL_META, goalTargets, type Goal } from "@/lib/goals";
 import { toWesternDigits } from "@/lib/links";
 import { cn } from "@/lib/utils";
+import { resetUiStores } from "@/stores/ui-store";
 
 const GOAL_PERIOD_LABELS: Record<GoalPeriod, string> = { day: "يومي", week: "أسبوعي", month: "شهري" };
 
@@ -48,7 +51,7 @@ function GoalPreview({ goal }: { goal: Goal }) {
 }
 
 export function ProfileForm({ displayName, goal }: { displayName: string; goal: Goal }) {
-  const [pending, startTransition] = useTransition();
+  const { mutateAsync: updateSettings, isPending: pending } = useUpdateSettings();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [period, setPeriod] = useState<GoalPeriod>(goal.period);
   const [targetText, setTargetText] = useState(String(goal.target));
@@ -61,8 +64,7 @@ export function ProfileForm({ displayName, goal }: { displayName: string; goal: 
       onSubmit={(event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        startTransition(async () => {
-          const result = await updateSettings(formData);
+        void updateSettings(formData).then((result) => {
           if (!result.ok) {
             setErrors(result.fieldErrors ?? {});
             toast.error(result.error);
@@ -169,7 +171,7 @@ type PendingImport = { fileName: string; data: unknown; count: number };
 export function ImportBackup() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-  const [importing, startImport] = useTransition();
+  const { mutateAsync: importBackup, isPending: importing } = useImportBackup();
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -223,8 +225,7 @@ export function ImportBackup() {
               onClick={(event) => {
                 event.preventDefault();
                 if (!pendingImport) return;
-                startImport(async () => {
-                  const result = await importBackup(pendingImport.data);
+                void importBackup(pendingImport.data).then((result) => {
                   if (!result.ok) {
                     toast.error(result.error);
                     return;
@@ -244,10 +245,43 @@ export function ImportBackup() {
   );
 }
 
-export function LogoutButton() {
-  const [pending, startTransition] = useTransition();
+/** The signed-in email, shown in the account card. */
+export function AccountEmail() {
+  const { user } = useUser();
+  const email = user?.primaryEmailAddress?.emailAddress;
   return (
-    <Button variant="outline" disabled={pending} onClick={() => startTransition(() => logout())}>
+    <p className="text-sm text-ink-muted">
+      {email ? (
+        <>
+          داخل بحساب{" "}
+          <span dir="ltr" className="font-medium text-ink">
+            {email}
+          </span>
+        </>
+      ) : (
+        "داخل بحسابك على هذا الجهاز."
+      )}
+    </p>
+  );
+}
+
+export function LogoutButton() {
+  const { signOut } = useClerk();
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState(false);
+  return (
+    <Button
+      variant="outline"
+      disabled={pending}
+      onClick={() => {
+        setPending(true);
+        // Nothing from this account may stay in memory for whoever signs in next.
+        void signOut({ redirectUrl: "/sign-in" }).then(() => {
+          queryClient.clear();
+          resetUiStores();
+        });
+      }}
+    >
       {pending ? <Loader2 className="animate-spin" /> : <LogOut aria-hidden="true" />}
       تسجيل الخروج
     </Button>

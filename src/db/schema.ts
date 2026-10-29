@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 // Relative import (not "@/") so drizzle-kit and the tsx scripts resolve it too.
 import {
@@ -12,16 +12,23 @@ import {
   WORK_MODE_KEYS,
 } from "../lib/constants";
 
-export const applications = sqliteTable(
+// RLS is on with no policies: Supabase's public Data API sees nothing, while the app's
+// own connection owns the tables and bypasses it. Isolation is done in every query.
+
+/** Clerk user id ("user_…"). Every row belongs to exactly one user. */
+const userId = () => text("user_id").notNull();
+
+const timestampMs = (name: string) => timestamp(name, { withTimezone: true, mode: "date", precision: 3 });
+
+export const applications = pgTable(
   "applications",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    userId: userId(),
+    createdAt: timestampMs("created_at").notNull().defaultNow(),
+    updatedAt: timestampMs("updated_at")
       .notNull()
-      .$defaultFn(() => new Date()),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-      .notNull()
-      .$defaultFn(() => new Date())
+      .defaultNow()
       .$onUpdateFn(() => new Date()),
     jobTitle: text("job_title").notNull(),
     company: text("company").notNull(),
@@ -34,7 +41,7 @@ export const applications = sqliteTable(
     appliedDate: text("applied_date").notNull(),
     status: text("status", { enum: STATUS_KEYS }).notNull().default("applied"),
     expectedSalary: text("expected_salary"),
-    cvTailored: integer("cv_tailored", { mode: "boolean" }).notNull().default(false),
+    cvTailored: boolean("cv_tailored").notNull().default(false),
     /** YYYY-MM-DD */
     nextFollowUp: text("next_follow_up"),
     priority: text("priority", { enum: PRIORITY_KEYS }).notNull().default("medium"),
@@ -43,44 +50,38 @@ export const applications = sqliteTable(
     followUpUrl: text("follow_up_url"),
   },
   (t) => [
-    index("applications_status_idx").on(t.status),
-    index("applications_applied_date_idx").on(t.appliedDate),
+    index("applications_user_idx").on(t.userId),
+    index("applications_user_applied_date_idx").on(t.userId, t.appliedDate),
   ],
-);
+).enableRLS();
 
-export const statusHistory = sqliteTable(
+export const statusHistory = pgTable(
   "status_history",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    userId: userId(),
     applicationId: integer("application_id")
       .notNull()
       .references(() => applications.id, { onDelete: "cascade" }),
     /** null for the entry written when the application is created */
     fromStatus: text("from_status", { enum: STATUS_KEYS }),
     toStatus: text("to_status", { enum: STATUS_KEYS }).notNull(),
-    changedAt: integer("changed_at", { mode: "timestamp_ms" })
-      .notNull()
-      .$defaultFn(() => new Date()),
+    changedAt: timestampMs("changed_at").notNull().defaultNow(),
   },
-  (t) => [index("status_history_application_idx").on(t.applicationId)],
-);
+  (t) => [
+    index("status_history_user_idx").on(t.userId),
+    index("status_history_application_idx").on(t.applicationId),
+  ],
+).enableRLS();
 
-/** Single row, always id = 1. */
-export const settings = sqliteTable("settings", {
-  id: integer("id").primaryKey(),
+/** One row per user, created on their first visit. */
+export const settings = pgTable("settings", {
+  userId: text("user_id").primaryKey(),
   /** Applications per `goalPeriod`; the other periods are derived in lib/goals. */
   goalTarget: integer("goal_target").notNull().default(DEFAULT_GOAL_TARGET),
   goalPeriod: text("goal_period", { enum: GOAL_PERIOD_KEYS }).notNull().default(DEFAULT_GOAL_PERIOD),
   displayName: text("display_name").notNull().default(""),
-});
-
-/** Failed login counter per client key (IP), used for rate limiting. */
-export const loginAttempts = sqliteTable("login_attempts", {
-  key: text("key").primaryKey(),
-  count: integer("count").notNull().default(0),
-  windowStart: integer("window_start", { mode: "timestamp_ms" }).notNull(),
-  lockedUntil: integer("locked_until", { mode: "timestamp_ms" }),
-});
+}).enableRLS();
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;

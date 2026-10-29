@@ -311,3 +311,20 @@ export function motivationSnapshot(apps: AppLike[], history: HistoryLike[], toda
 }
 
 export type MotivationSnapshot = ReturnType<typeof motivationSnapshot>;
+
+export type ActivityItem = Pick<StatusChange, "id" | "applicationId" | "fromStatus" | "toStatus" | "changedAt"> &
+  Pick<Application, "jobTitle" | "company">;
+
+/** Latest status changes, newest first, with the application's names attached. */
+export function recentActivity(apps: Application[], history: StatusChange[], limit = 8): ActivityItem[] {
+  const byId = new Map(apps.map((app) => [app.id, app]));
+  return [...history]
+    .sort((a, b) => b.changedAt.getTime() - a.changedAt.getTime() || b.id - a.id)
+    .flatMap((h) => {
+      const app = byId.get(h.applicationId);
+      if (!app) return [];
+      const { id, applicationId, fromStatus, toStatus, changedAt } = h;
+      return [{ id, applicationId, fromStatus, toStatus, changedAt, jobTitle: app.jobTitle, company: app.company }];
+    })
+    .slice(0, limit);
+}

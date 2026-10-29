@@ -1,12 +1,6 @@
-import {
-  JOB_TYPE_KEYS,
-  SOURCE_KEYS,
-  STATUS_KEYS,
-  type JobType,
-  type Source,
-  type Status,
-} from "./constants";
-import { ISO_DATE_RE } from "./dates";
+import type { Application } from "@/db/schema";
+
+import { PRIORITY_KEYS, STATUS_KEYS, type JobType, type Source, type Status } from "./constants";
 
 export const SORT_KEYS = ["applied_date", "job_title", "company", "status", "priority", "updated_at"] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
@@ -23,27 +17,46 @@ export type ApplicationFilters = {
   dir: SortDir;
 };
 
-type SearchParams = Record<string, string | string[] | undefined>;
-
-const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-const oneOf = <T extends string>(values: readonly T[], v: string | undefined): T | undefined =>
-  values.includes(v as T) ? (v as T) : undefined;
-
-export function parseFilters(params: SearchParams): ApplicationFilters {
-  const date = (v: string | undefined) => (v && ISO_DATE_RE.test(v) ? v : undefined);
-  const q = first(params.q)?.trim().slice(0, 100);
-  return {
-    q: q || undefined,
-    status: oneOf(STATUS_KEYS, first(params.status)),
-    source: oneOf(SOURCE_KEYS, first(params.source)),
-    jobType: oneOf(JOB_TYPE_KEYS, first(params.type)),
-    from: date(first(params.from)),
-    to: date(first(params.to)),
-    sort: oneOf(SORT_KEYS, first(params.sort)) ?? "applied_date",
-    dir: first(params.dir) === "asc" ? "asc" : "desc",
-  };
-}
+export const DEFAULT_FILTERS: ApplicationFilters = { sort: "applied_date", dir: "desc" };
 
 export function hasActiveFilters(f: ApplicationFilters): boolean {
-  return Boolean(f.q || f.status || f.source || f.jobType || f.from || f.to);
+  return Boolean(f.q?.trim() || f.status || f.source || f.jobType || f.from || f.to);
+}
+
+const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+function compareBy(sort: SortKey, a: Application, b: Application): number {
+  switch (sort) {
+    case "job_title":
+      return compareText(a.jobTitle, b.jobTitle);
+    case "company":
+      return compareText(a.company, b.company);
+    case "status":
+      return STATUS_KEYS.indexOf(a.status) - STATUS_KEYS.indexOf(b.status);
+    case "priority":
+      return PRIORITY_KEYS.indexOf(a.priority) - PRIORITY_KEYS.indexOf(b.priority);
+    case "updated_at":
+      return a.updatedAt.getTime() - b.updatedAt.getTime();
+    default:
+      return compareText(a.appliedDate, b.appliedDate);
+  }
+}
+
+/** Search, filter and sort the cached list in the browser, so typing never waits on the server. */
+export function filterApplications(apps: Application[], f: ApplicationFilters): Application[] {
+  const needle = f.q?.trim().slice(0, 100).toLowerCase();
+  const contains = (value: string | null) => (value ?? "").toLowerCase().includes(needle!);
+  const sign = f.dir === "asc" ? 1 : -1;
+
+  return apps
+    .filter(
+      (app) =>
+        (!needle || contains(app.jobTitle) || contains(app.company) || contains(app.location) || contains(app.notes)) &&
+        (!f.status || app.status === f.status) &&
+        (!f.source || app.source === f.source) &&
+        (!f.jobType || app.jobType === f.jobType) &&
+        (!f.from || app.appliedDate >= f.from) &&
+        (!f.to || app.appliedDate <= f.to),
+    )
+    .sort((a, b) => sign * compareBy(f.sort, a, b) || b.id - a.id);
 }

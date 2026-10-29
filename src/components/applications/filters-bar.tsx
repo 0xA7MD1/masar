@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Search, X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Search, X } from "lucide-react";
 
 import { DatePicker } from "@/components/applications/form-fields";
 import { Button } from "@/components/ui/button";
@@ -16,8 +15,11 @@ import {
   SOURCE_LABELS,
   STATUS_KEYS,
   statusLabel,
+  type JobType,
+  type Source,
+  type Status,
 } from "@/lib/constants";
-import type { ApplicationFilters } from "@/lib/filters";
+import { useFiltersStore } from "@/stores/ui-store";
 
 const ALL = "all";
 
@@ -56,32 +58,12 @@ function FilterSelect({
   );
 }
 
-export function FiltersBar({ filters, active }: { filters: ApplicationFilters; active: boolean }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [pending, startTransition] = useTransition();
-  const [query, setQuery] = useState(filters.q ?? "");
+/** Filters live in a UI store and are applied to the cached list, so nothing waits on the server. */
+export function FiltersBar({ active }: { active: boolean }) {
+  const filters = useFiltersStore((s) => s.filters);
+  const update = useFiltersStore((s) => s.setFilters);
+  const clearFilters = useFiltersStore((s) => s.clearFilters);
   const searchRef = useRef<HTMLInputElement>(null);
-
-  function update(patch: Record<string, string | undefined>) {
-    const params = new URLSearchParams(searchParams.toString());
-    for (const [key, value] of Object.entries(patch)) {
-      if (value) params.set(key, value);
-      else params.delete(key);
-    }
-    const qs = params.toString();
-    startTransition(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
-  }
-
-  // Debounced search so typing doesn't fire a request per keystroke.
-  const currentQ = searchParams.get("q") ?? "";
-  useEffect(() => {
-    if (query.trim() === currentQ) return;
-    const timer = window.setTimeout(() => update({ q: query.trim() || undefined }), 300);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, currentQ]);
 
   // "/" focuses the search box, like most list views.
   useEffect(() => {
@@ -108,15 +90,12 @@ export function FiltersBar({ filters, active }: { filters: ApplicationFilters; a
               ref={searchRef}
               id="filter-q"
               type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={filters.q ?? ""}
+              onChange={(e) => update({ q: e.target.value || undefined })}
               placeholder="المسمى، الشركة، الموقع، الملاحظات…"
               className="h-9 ps-10"
               aria-keyshortcuts="/"
             />
-            {pending ? (
-              <Loader2 className="absolute end-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-ink-subtle" aria-label="جاري التحميل" />
-            ) : null}
           </div>
         </div>
         <FilterSelect
@@ -124,21 +103,21 @@ export function FiltersBar({ filters, active }: { filters: ApplicationFilters; a
           label="الحالة"
           value={filters.status}
           options={STATUS_KEYS.map((s) => ({ value: s, label: statusLabel(s) }))}
-          onChange={(v) => update({ status: v })}
+          onChange={(v) => update({ status: v as Status | undefined })}
         />
         <FilterSelect
           id="filter-source"
           label="المصدر"
           value={filters.source}
           options={SOURCE_KEYS.map((s) => ({ value: s, label: SOURCE_LABELS[s] }))}
-          onChange={(v) => update({ source: v })}
+          onChange={(v) => update({ source: v as Source | undefined })}
         />
         <FilterSelect
           id="filter-type"
           label="نوع الوظيفة"
           value={filters.jobType}
           options={JOB_TYPE_KEYS.map((t) => ({ value: t, label: JOB_TYPE_LABELS[t] }))}
-          onChange={(v) => update({ type: v })}
+          onChange={(v) => update({ jobType: v as JobType | undefined })}
         />
         <div className="space-y-1.5">
           <Label htmlFor="filter-from" className="text-xs text-ink-muted">
@@ -174,10 +153,7 @@ export function FiltersBar({ filters, active }: { filters: ApplicationFilters; a
               variant="ghost"
               size="sm"
               className="h-9"
-              onClick={() => {
-                setQuery("");
-                update({ q: undefined, status: undefined, source: undefined, type: undefined, from: undefined, to: undefined });
-              }}
+              onClick={clearFilters}
             >
               <X aria-hidden="true" />
               امسح الفلاتر

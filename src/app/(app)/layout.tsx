@@ -1,32 +1,46 @@
-import { redirect } from "next/navigation";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
-import { CelebrationProvider } from "@/components/celebrate/celebration-provider";
+import { CelebrationHost } from "@/components/celebrate/celebration-host";
 import { BottomNav, QuickAddFab, TopNav } from "@/components/nav/app-nav";
-import { QuickAddProvider } from "@/components/quick-add/quick-add-provider";
-import { isAuthenticated } from "@/lib/auth/server";
+import { QuickAddSheet } from "@/components/quick-add/quick-add-sheet";
+import { getSettings, listApplications, listHistory } from "@/lib/queries";
+import { makeQueryClient } from "@/lib/query-client";
+import { queryKeys } from "@/lib/query-keys";
+import { requireUserId } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Prefetches the data every page shares. Layouts don't re-render on client navigation,
+ * so moving between pages reads the hydrated cache instead of hitting the database again.
+ */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // The middleware already guards these routes; this keeps a misconfigured matcher from leaking data.
-  if (!(await isAuthenticated())) redirect("/login");
+  const userId = await requireUserId();
+
+  const queryClient = makeQueryClient();
+  await Promise.all([
+    queryClient.prefetchQuery({ queryKey: queryKeys.applications, queryFn: () => listApplications(userId) }),
+    queryClient.prefetchQuery({ queryKey: queryKeys.history, queryFn: () => listHistory(userId) }),
+    queryClient.prefetchQuery({ queryKey: queryKeys.settings, queryFn: () => getSettings(userId) }),
+  ]);
 
   return (
-    <CelebrationProvider>
-      <QuickAddProvider>
-        <a href="#main" className="skip-link">
-          تخطَّ إلى المحتوى
-        </a>
-        <TopNav />
-        <main
-          id="main"
-          className="mx-auto w-full max-w-6xl px-4 pt-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] md:px-8 md:pt-10 md:pb-20"
-        >
-          {children}
-        </main>
-        <BottomNav />
-        <QuickAddFab />
-      </QuickAddProvider>
-    </CelebrationProvider>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <a href="#main" className="skip-link">
+        تخطَّ إلى المحتوى
+      </a>
+      <TopNav />
+      <main
+        id="main"
+        className="mx-auto w-full max-w-6xl px-4 pt-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] md:px-8 md:pt-10 md:pb-20"
+      >
+        {children}
+      </main>
+      <BottomNav />
+      <QuickAddFab />
+      <QuickAddSheet />
+      <CelebrationHost />
+    </HydrationBoundary>
   );
 }

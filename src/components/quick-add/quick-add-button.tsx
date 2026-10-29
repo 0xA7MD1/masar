@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { useQuickAdd } from "./quick-add-provider";
+import { useQuickAdd } from "./quick-add-sheet";
 
 export function QuickAddButton({
   children = "أضف طلب",

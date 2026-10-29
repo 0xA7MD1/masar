@@ -10,7 +10,7 @@ import { primaryName, secondaryName } from "@/lib/application-name";
 import { daysPhrase, formatActivityTime } from "@/lib/dates";
 import { STATUS_META, statusLabel } from "@/lib/constants";
 import type { Badge } from "@/lib/metrics";
-import type { ActivityItem } from "@/lib/queries";
+import type { ActivityItem } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 
 type FollowUp = { app: Application; overdueDays: number };

@@ -1,13 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
 import type { Celebration, MotivationFeedback } from "@/lib/celebrations";
-
-type Celebrate = (feedback: MotivationFeedback | undefined) => void;
-
-const CelebrationContext = createContext<Celebrate>(() => {});
+import { useCelebrationStore } from "@/stores/ui-store";
 
 const CONFETTI_COLORS = ["#268F86", "#35B0A5", "#00443C", "#FF4F2F", "#D8E3D3", "#FFFDF7"];
 
@@ -78,27 +75,33 @@ function EncouragementToast({ message }: { message: string }) {
   );
 }
 
-export function CelebrationProvider({ children }: { children: React.ReactNode }) {
-  const celebrate = useCallback<Celebrate>((feedback) => {
-    if (!feedback) return;
-    const { celebrations, encouragement } = feedback;
-    if (celebrations.length > 0) {
-      void fireConfetti(confettiSize(celebrations));
-      celebrations.forEach((celebration, i) => {
-        window.setTimeout(
-          () => toast.custom(() => <CelebrationToast celebration={celebration} />, { duration: 6500 }),
-          i * 450,
-        );
-      });
-    }
-    if (encouragement) {
-      toast.custom(() => <EncouragementToast message={encouragement} />, { duration: 7000 });
-    }
-  }, []);
-
-  return <CelebrationContext value={celebrate}>{children}</CelebrationContext>;
+function play({ celebrations, encouragement }: MotivationFeedback) {
+  if (celebrations.length > 0) {
+    void fireConfetti(confettiSize(celebrations));
+    celebrations.forEach((celebration, i) => {
+      window.setTimeout(
+        () => toast.custom(() => <CelebrationToast celebration={celebration} />, { duration: 6500 }),
+        i * 450,
+      );
+    });
+  }
+  if (encouragement) {
+    toast.custom(() => <EncouragementToast message={encouragement} />, { duration: 7000 });
+  }
 }
 
-export function useCelebrate(): Celebrate {
-  return useContext(CelebrationContext);
+/** Mounted once in the app layout; plays whatever feedback lands in the celebration store. */
+export function CelebrationHost() {
+  const queue = useCelebrationStore((s) => s.queue);
+  const drain = useCelebrationStore((s) => s.drain);
+
+  useEffect(() => {
+    if (queue.length > 0) drain().forEach(play);
+  }, [queue, drain]);
+
+  return null;
+}
+
+export function useCelebrate() {
+  return useCelebrationStore((s) => s.celebrate);
 }
