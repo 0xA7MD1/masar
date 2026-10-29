@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -18,8 +18,7 @@ import {
 import { Ellipsis, Ghost } from "lucide-react";
 import { toast } from "sonner";
 
-import { updateApplicationStatus } from "@/actions/applications";
-import { useCelebrate } from "@/components/celebrate/celebration-provider";
+import { useCelebrate } from "@/components/celebrate/celebration-host";
 import { ScrollToEnd } from "@/components/scroll-to-end";
 import { PriorityDot, SourceBadge } from "@/components/status-badges";
 import { Button } from "@/components/ui/button";
@@ -30,6 +29,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMoveApplication } from "@/hooks/use-masar-data";
 import { primaryName, secondaryName } from "@/lib/application-name";
 import { STATUS_KEYS, STATUS_META, statusLabel, type Priority, type Source, type Status } from "@/lib/constants";
 import { daysPhrase, relativeDays } from "@/lib/dates";
@@ -46,18 +46,14 @@ export type BoardCard = {
   staleDays: number | null;
 };
 
-type Move = { id: number; status: Status };
-
 // Columns are laid out in an LTR scroller in reverse order so the pipeline still
 // reads right-to-left while dnd-kit's auto-scroll gets the positive scrollLeft it expects.
 const COLUMN_ORDER = [...STATUS_KEYS].reverse();
 
 export function KanbanBoard({ cards, today }: { cards: BoardCard[]; today: string }) {
   const celebrate = useCelebrate();
-  const [, startTransition] = useTransition();
-  const [optimisticCards, applyMove] = useOptimistic(cards, (state: BoardCard[], move: Move) =>
-    state.map((card) => (card.id === move.id ? { ...card, status: move.status } : card)),
-  );
+  // Optimistic: the card moves in the query cache right away and rolls back on failure.
+  const { mutateAsync: moveApplication } = useMoveApplication();
   const [activeId, setActiveId] = useState<number | null>(null);
 
   const sensors = useSensors(
@@ -66,23 +62,15 @@ export function KanbanBoard({ cards, today }: { cards: BoardCard[]; today: strin
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
   );
 
-  const byId = useMemo(() => new Map(optimisticCards.map((c) => [c.id, c])), [optimisticCards]);
+  const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
 
   const move = useCallback(
     (id: number, status: Status) => {
       const card = byId.get(id);
       if (!card || card.status === status) return;
-      startTransition(async () => {
-        applyMove({ id, status });
-        const result = await updateApplicationStatus(id, status);
-        if (!result.ok) {
-          toast.error(result.error);
-          return;
-        }
-        celebrate(result.data);
-      });
+      moveApplication({ id, status }).then(celebrate, (error: Error) => toast.error(error.message));
     },
-    [byId, applyMove, celebrate],
+    [byId, moveApplication, celebrate],
   );
 
   const announcements: Announcements = {
@@ -120,7 +108,7 @@ export function KanbanBoard({ cards, today }: { cards: BoardCard[]; today: strin
         },
       }}
     >
-      <ColumnJumper cards={optimisticCards} />
+      <ColumnJumper cards={cards} />
       <ScrollToEnd
         dir="ltr"
         className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-6 md:mx-0 md:snap-none md:px-0"
@@ -129,7 +117,7 @@ export function KanbanBoard({ cards, today }: { cards: BoardCard[]; today: strin
           <Column
             key={status}
             status={status}
-            cards={optimisticCards.filter((c) => c.status === status)}
+            cards={cards.filter((c) => c.status === status)}
             today={today}
             onMove={move}
           />

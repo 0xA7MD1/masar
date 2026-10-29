@@ -1,1 +1,0 @@
-ALTER TABLE `applications` ADD `follow_up_url` text;

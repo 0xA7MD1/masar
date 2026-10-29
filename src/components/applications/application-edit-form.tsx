@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Save, Trash } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteApplication, updateApplication } from "@/actions/applications";
-import { useCelebrate } from "@/components/celebrate/celebration-provider";
+import { useCelebrate } from "@/components/celebrate/celebration-host";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useDeleteApplication, useUpdateApplication } from "@/hooks/use-masar-data";
 import type { FieldErrors } from "@/lib/action-result";
 import { primaryName } from "@/lib/application-name";
 
@@ -26,14 +26,13 @@ import { ApplicationFields, type ApplicationDefaults } from "./application-field
 
 export function ApplicationEditForm({ id, defaults }: { id: number; defaults: ApplicationDefaults }) {
   const celebrate = useCelebrate();
-  const [saving, startSaving] = useTransition();
+  const { mutateAsync: updateApplication, isPending: saving } = useUpdateApplication(id);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    startSaving(async () => {
-      const result = await updateApplication(id, formData);
+    void updateApplication(formData).then((result) => {
       if (!result.ok) {
         setErrors(result.fieldErrors ?? {});
         toast.error(result.error);
@@ -61,7 +60,7 @@ export function ApplicationEditForm({ id, defaults }: { id: number; defaults: Ap
 
 function DeleteApplicationButton({ id, title }: { id: number; title: string }) {
   const router = useRouter();
-  const [deleting, startDeleting] = useTransition();
+  const { mutateAsync: deleteApplication, isPending: deleting } = useDeleteApplication();
 
   return (
     <AlertDialog>
@@ -85,8 +84,7 @@ function DeleteApplicationButton({ id, title }: { id: number; title: string }) {
             disabled={deleting}
             onClick={(event) => {
               event.preventDefault();
-              startDeleting(async () => {
-                const result = await deleteApplication(id);
+              void deleteApplication(id).then((result) => {
                 if (!result.ok) {
                   toast.error(result.error);
                   return;

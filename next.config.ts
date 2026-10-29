@@ -7,10 +7,6 @@ const nextConfig: NextConfig = {
   // The parent folder has its own lockfile; pin the root to this project.
   turbopack: { root: path.join(__dirname) },
   outputFileTracingRoot: path.join(__dirname),
-  experimental: {
-    // JSON backups are imported through a server action.
-    serverActions: { bodySizeLimit: "5mb" },
-  },
   async headers() {
     return [
       {

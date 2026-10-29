@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft, Plus, Settings2 } from "lucide-react";
 
 import { Logo } from "@/components/logo";
-import { useQuickAdd } from "@/components/quick-add/quick-add-provider";
+import { useQuickAdd } from "@/components/quick-add/quick-add-sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

@@ -1,25 +1,19 @@
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
 import * as schema from "./schema";
 
-const LOCAL_DATABASE_URL = "file:local.db";
-
 export function resolveDatabaseUrl(): string {
-  const url = process.env.TURSO_DATABASE_URL;
-  if (url) return url;
-  // Vercel's filesystem is ephemeral, so a local SQLite file would silently lose data there.
-  if (process.env.VERCEL) {
-    throw new Error("TURSO_DATABASE_URL is not set. Add it in the Vercel project settings.");
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("DATABASE_URL is not set. Use the Supabase transaction pooler URL (port 6543).");
   }
-  return LOCAL_DATABASE_URL;
+  return url;
 }
 
-export function createDb() {
-  const client = createClient({
-    url: resolveDatabaseUrl(),
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-  });
+export function createDb(url = resolveDatabaseUrl()) {
+  // The Supabase transaction pooler does not support prepared statements.
+  const client = postgres(url, { prepare: false });
   return { client, db: drizzle(client, { schema }) };
 }
 

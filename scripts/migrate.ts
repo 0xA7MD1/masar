@@ -3,14 +3,13 @@ import { loadEnvConfig } from "@next/env";
 loadEnvConfig(process.cwd());
 
 async function main() {
-  const { migrate } = await import("drizzle-orm/libsql/migrator");
+  const { migrate } = await import("drizzle-orm/postgres-js/migrator");
   const { createDb, resolveDatabaseUrl } = await import("../src/db/client");
 
-  const url = resolveDatabaseUrl();
   const { db, client } = createDb();
-  console.log(`Running migrations against ${url.startsWith("file:") ? url : new URL(url).host}…`);
+  console.log(`Running migrations against ${new URL(resolveDatabaseUrl()).host}…`);
   await migrate(db, { migrationsFolder: "./drizzle" });
-  client.close();
+  await client.end();
   console.log("Migrations complete.");
 }
 

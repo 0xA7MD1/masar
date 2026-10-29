@@ -1,19 +1,36 @@
-import { redirect } from "next/navigation";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
-import { CelebrationProvider } from "@/components/celebrate/celebration-provider";
+import { CelebrationHost } from "@/components/celebrate/celebration-host";
 import { BottomNav, QuickAddFab, TopNav } from "@/components/nav/app-nav";
-import { QuickAddProvider } from "@/components/quick-add/quick-add-provider";
-import { isAuthenticated } from "@/lib/auth/server";
+import { SupabaseProvider } from "@/components/providers/supabase-provider";
+import { QuickAddSheet } from "@/components/quick-add/quick-add-sheet";
+import { getSettings, listApplications, listHistory } from "@/lib/data/reads";
+import { makeQueryClient } from "@/lib/query-client";
+import { queryKeys } from "@/lib/query-keys";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { requireUserId } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Prefetches the data every page shares. Layouts don't re-render on client navigation,
+ * so moving between pages reads the hydrated cache instead of hitting the database again.
+ */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  // The middleware already guards these routes; this keeps a misconfigured matcher from leaking data.
-  if (!(await isAuthenticated())) redirect("/login");
+  // The middleware already guards these routes; without a user there is no token to read with.
+  await requireUserId();
+  const supabase = await createServerSupabase();
+
+  const queryClient = makeQueryClient();
+  await Promise.all([
+    queryClient.prefetchQuery({ queryKey: queryKeys.applications, queryFn: () => listApplications(supabase) }),
+    queryClient.prefetchQuery({ queryKey: queryKeys.history, queryFn: () => listHistory(supabase) }),
+    queryClient.prefetchQuery({ queryKey: queryKeys.settings, queryFn: () => getSettings(supabase) }),
+  ]);
 
   return (
-    <CelebrationProvider>
-      <QuickAddProvider>
+    <SupabaseProvider>
+      <HydrationBoundary state={dehydrate(queryClient)}>
         <a href="#main" className="skip-link">
           تخطَّ إلى المحتوى
         </a>
@@ -26,7 +43,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
         <BottomNav />
         <QuickAddFab />
-      </QuickAddProvider>
-    </CelebrationProvider>
+        <QuickAddSheet />
+        <CelebrationHost />
+      </HydrationBoundary>
+    </SupabaseProvider>
   );
 }

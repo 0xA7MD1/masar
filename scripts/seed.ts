@@ -5,7 +5,7 @@ loadEnvConfig(process.cwd());
 type Status = import("../src/lib/constants").Status;
 type NewApplication = import("../src/db/schema").NewApplication;
 
-type SampleApplication = Omit<NewApplication, "appliedDate" | "status" | "nextFollowUp"> & {
+type SampleApplication = Omit<NewApplication, "appliedDate" | "status" | "nextFollowUp" | "userId"> & {
   /** days before today */
   appliedDaysAgo: number;
   followUpInDays?: number;
@@ -170,19 +170,24 @@ const SAMPLES: SampleApplication[] = [
   },
 ];
 
-async function main() {
-  const { createDb, resolveDatabaseUrl } = await import("../src/db/client");
-  const { applications, settings, statusHistory } = await import("../src/db/schema");
-  const { addDays, todayISO } = await import("../src/lib/dates");
+function argValue(name: string): string | undefined {
+  const i = process.argv.indexOf(name);
+  return i === -1 ? undefined : process.argv[i + 1];
+}
 
-  const url = resolveDatabaseUrl();
-  if (!url.startsWith("file:") && !process.argv.includes("--force")) {
+async function main() {
+  const userId = argValue("--user");
+  if (!userId) {
     console.error(
-      `Refusing to seed a remote database (${new URL(url).host}) because it deletes all data.\n` +
-        "Run `pnpm db:seed --force` if you really mean it.",
+      "Usage: pnpm db:seed --user <clerk user id>\nIt replaces that user's data (and only theirs) with sample data.",
     );
     process.exit(1);
   }
+
+  const { eq, sql } = await import("drizzle-orm");
+  const { createDb } = await import("../src/db/client");
+  const { applications, settings, statusHistory } = await import("../src/db/schema");
+  const { addDays, todayISO } = await import("../src/lib/dates");
 
   const { db, client } = createDb();
   const today = todayISO();
@@ -190,41 +195,45 @@ async function main() {
   const at = (daysAgo: number, hourOffset = 0) =>
     new Date(`${addDays(today, -daysAgo)}T07:00:00.000Z`).getTime() + hourOffset * 3_600_000;
 
-  await db.delete(statusHistory);
-  await db.delete(applications);
-  await db
-    .insert(settings)
-    .values({ id: 1, goalPeriod: "week", goalTarget: 10, displayName: "أحمد" })
-    .onConflictDoUpdate({ target: settings.id, set: { goalPeriod: "week", goalTarget: 10, displayName: "أحمد" } });
+  await db.transaction(async (tx) => {
+    // Each sample writes its own status path, so the history trigger stays out of the way.
+    await tx.execute(sql`select set_config('masar.skip_history', 'on', true)`);
+    // History goes with the applications through ON DELETE CASCADE.
+    await tx.delete(applications).where(eq(applications.userId, userId));
+    const profile = { goalPeriod: "week" as const, goalTarget: 10, displayName: "أحمد" };
+    await tx.insert(settings).values({ userId, ...profile }).onConflictDoUpdate({ target: settings.userId, set: profile });
 
-  for (const sample of SAMPLES) {
-    const { appliedDaysAgo, followUpInDays, path, ...fields } = sample;
-    const [first] = path;
-    const last = path[path.length - 1];
-    const [created] = await db
-      .insert(applications)
-      .values({
-        ...fields,
-        appliedDate: addDays(today, -appliedDaysAgo),
-        status: last[0],
-        nextFollowUp: followUpInDays === undefined ? null : addDays(today, followUpInDays),
-        createdAt: new Date(at(first[1])),
-        updatedAt: new Date(at(last[1], 2)),
-      })
-      .returning({ id: applications.id });
+    for (const sample of SAMPLES) {
+      const { appliedDaysAgo, followUpInDays, path, ...fields } = sample;
+      const [first] = path;
+      const last = path[path.length - 1];
+      const [created] = await tx
+        .insert(applications)
+        .values({
+          ...fields,
+          userId,
+          appliedDate: addDays(today, -appliedDaysAgo),
+          status: last[0],
+          nextFollowUp: followUpInDays === undefined ? null : addDays(today, followUpInDays),
+          createdAt: new Date(at(first[1])),
+          updatedAt: new Date(at(last[1], 2)),
+        })
+        .returning({ id: applications.id });
 
-    await db.insert(statusHistory).values(
-      path.map(([status, daysAgo], i) => ({
-        applicationId: created.id,
-        fromStatus: i === 0 ? null : path[i - 1][0],
-        toStatus: status,
-        changedAt: new Date(at(daysAgo, i === 0 ? 0 : 2)),
-      })),
-    );
-  }
+      await tx.insert(statusHistory).values(
+        path.map(([status, daysAgo], i) => ({
+          userId,
+          applicationId: created.id,
+          fromStatus: i === 0 ? null : path[i - 1][0],
+          toStatus: status,
+          changedAt: new Date(at(daysAgo, i === 0 ? 0 : 2)),
+        })),
+      );
+    }
+  });
 
-  client.close();
-  console.log(`Seeded ${SAMPLES.length} applications.`);
+  await client.end();
+  console.log(`Seeded ${SAMPLES.length} applications for ${userId}.`);
 }
 
 main().catch((error) => {

@@ -1,226 +1,315 @@
 {
-  "version": "6",
-  "dialect": "sqlite",
-  "id": "c2d29dd1-9551-4cd2-982a-e2d18949fc2f",
-  "prevId": "ac6d8a36-05a1-4018-9195-f412009a682f",
+  "id": "da2112f1-cfbe-4bce-8d28-d436be3e6ef6",
+  "prevId": "56c30d70-a78f-4968-bcd9-b7e950af498d",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "applications": {
+    "public.applications": {
       "name": "applications",
+      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "identity": {
+            "type": "byDefault",
+            "name": "applications_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(auth.jwt()->>'sub')"
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "timestamp (3) with time zone",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "timestamp (3) with time zone",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "default": "now()"
         },
         "job_title": {
           "name": "job_title",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
         },
         "company": {
           "name": "company",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
         },
         "source": {
           "name": "source",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
         },
         "job_type": {
           "name": "job_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "work_mode": {
           "name": "work_mode",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "location": {
           "name": "location",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "job_url": {
           "name": "job_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "applied_date": {
           "name": "applied_date",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
           "default": "'applied'"
         },
         "expected_salary": {
           "name": "expected_salary",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "cv_tailored": {
           "name": "cv_tailored",
-          "type": "integer",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
           "default": false
         },
         "next_follow_up": {
           "name": "next_follow_up",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "priority": {
           "name": "priority",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
           "default": "'medium'"
         },
         "notes": {
           "name": "notes",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "follow_up_url": {
           "name": "follow_up_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         }
       },
       "indexes": {
-        "applications_status_idx": {
-          "name": "applications_status_idx",
+        "applications_user_idx": {
+          "name": "applications_user_idx",
           "columns": [
-            "status"
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
-        "applications_applied_date_idx": {
-          "name": "applications_applied_date_idx",
+        "applications_user_applied_date_idx": {
+          "name": "applications_user_applied_date_idx",
           "columns": [
-            "applied_date"
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "applied_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {
+        "applications_select_own": {
+          "name": "applications_select_own",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "user_id = (select auth.jwt()->>'sub')"
+        },
+        "applications_insert_own": {
+          "name": "applications_insert_own",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "user_id = (select auth.jwt()->>'sub')"
+        },
+        "applications_update_own": {
+          "name": "applications_update_own",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "user_id = (select auth.jwt()->>'sub')",
+          "withCheck": "user_id = (select auth.jwt()->>'sub')"
+        },
+        "applications_delete_own": {
+          "name": "applications_delete_own",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "user_id = (select auth.jwt()->>'sub')"
+        }
+      },
+      "checkConstraints": {
+        "applications_source_check": {
+          "name": "applications_source_check",
+          "value": "\"source\" in ('linkedin', 'jadarat', 'bayt', 'indeed', 'tanqeeb', 'mourjan', 'sabbar', 'company_site', 'whatsapp', 'walk_in', 'referral', 'other')"
+        },
+        "applications_job_type_check": {
+          "name": "applications_job_type_check",
+          "value": "\"job_type\" is null or \"job_type\" in ('tech', 'non_tech')"
+        },
+        "applications_work_mode_check": {
+          "name": "applications_work_mode_check",
+          "value": "\"work_mode\" is null or \"work_mode\" in ('onsite', 'remote', 'hybrid')"
+        },
+        "applications_status_check": {
+          "name": "applications_status_check",
+          "value": "\"status\" in ('saved', 'applied', 'contacted', 'interview', 'offer', 'accepted', 'rejected', 'ghosted')"
+        },
+        "applications_priority_check": {
+          "name": "applications_priority_check",
+          "value": "\"priority\" in ('low', 'medium', 'high')"
+        },
+        "applications_job_title_length": {
+          "name": "applications_job_title_length",
+          "value": "char_length(\"job_title\") <= 160"
+        },
+        "applications_company_length": {
+          "name": "applications_company_length",
+          "value": "char_length(\"company\") <= 160"
+        },
+        "applications_location_length": {
+          "name": "applications_location_length",
+          "value": "char_length(\"location\") <= 120"
+        },
+        "applications_job_url_length": {
+          "name": "applications_job_url_length",
+          "value": "char_length(\"job_url\") <= 2048"
+        },
+        "applications_expected_salary_length": {
+          "name": "applications_expected_salary_length",
+          "value": "char_length(\"expected_salary\") <= 80"
+        },
+        "applications_notes_length": {
+          "name": "applications_notes_length",
+          "value": "char_length(\"notes\") <= 5000"
+        },
+        "applications_follow_up_url_length": {
+          "name": "applications_follow_up_url_length",
+          "value": "char_length(\"follow_up_url\") <= 2048"
+        },
+        "applications_applied_date_format": {
+          "name": "applications_applied_date_format",
+          "value": "\"applied_date\" ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'"
+        },
+        "applications_next_follow_up_format": {
+          "name": "applications_next_follow_up_format",
+          "value": "\"next_follow_up\" ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'"
+        }
+      },
+      "isRLSEnabled": false
     },
-    "login_attempts": {
-      "name": "login_attempts",
+    "public.settings": {
+      "name": "settings",
+      "schema": "",
       "columns": {
-        "key": {
-          "name": "key",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "default": "(auth.jwt()->>'sub')"
         },
-        "count": {
-          "name": "count",
+        "goal_target": {
+          "name": "goal_target",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "window_start": {
-          "name": "window_start",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "locked_until": {
-          "name": "locked_until",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "settings": {
-      "name": "settings",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "weekly_goal": {
-          "name": "weekly_goal",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
           "default": 10
+        },
+        "goal_period": {
+          "name": "goal_period",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'week'"
         },
         "display_name": {
           "name": "display_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
           "default": "''"
         }
       },
@@ -228,54 +317,136 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {
+        "settings_select_own": {
+          "name": "settings_select_own",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "user_id = (select auth.jwt()->>'sub')"
+        },
+        "settings_insert_own": {
+          "name": "settings_insert_own",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "user_id = (select auth.jwt()->>'sub')"
+        },
+        "settings_update_own": {
+          "name": "settings_update_own",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "user_id = (select auth.jwt()->>'sub')",
+          "withCheck": "user_id = (select auth.jwt()->>'sub')"
+        }
+      },
+      "checkConstraints": {
+        "settings_goal_period_check": {
+          "name": "settings_goal_period_check",
+          "value": "\"goal_period\" in ('day', 'week', 'month')"
+        },
+        "settings_goal_target_range": {
+          "name": "settings_goal_target_range",
+          "value": "goal_target >= 1 and goal_target <= case goal_period when 'day' then 50 when 'week' then 300 when 'month' then 1000 end"
+        },
+        "settings_display_name_length": {
+          "name": "settings_display_name_length",
+          "value": "char_length(\"display_name\") <= 40"
+        }
+      },
+      "isRLSEnabled": false
     },
-    "status_history": {
+    "public.status_history": {
       "name": "status_history",
+      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "identity": {
+            "type": "byDefault",
+            "name": "status_history_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(auth.jwt()->>'sub')"
         },
         "application_id": {
           "name": "application_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
         },
         "from_status": {
           "name": "from_status",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "to_status": {
           "name": "to_status",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
         },
         "changed_at": {
           "name": "changed_at",
-          "type": "integer",
+          "type": "timestamp (3) with time zone",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "default": "now()"
         }
       },
       "indexes": {
+        "status_history_user_idx": {
+          "name": "status_history_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "status_history_application_idx": {
           "name": "status_history_application_idx",
           "columns": [
-            "application_id"
+            {
+              "expression": "application_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -295,17 +466,48 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {
+        "status_history_select_own": {
+          "name": "status_history_select_own",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "user_id = (select auth.jwt()->>'sub')"
+        },
+        "status_history_insert_own": {
+          "name": "status_history_insert_own",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "user_id = (select auth.jwt()->>'sub') and exists (\n        select 1 from public.applications a where a.id = application_id and a.user_id = (select auth.jwt()->>'sub')\n      )"
+        }
+      },
+      "checkConstraints": {
+        "status_history_from_status_check": {
+          "name": "status_history_from_status_check",
+          "value": "\"from_status\" is null or \"from_status\" in ('saved', 'applied', 'contacted', 'interview', 'offer', 'accepted', 'rejected', 'ghosted')"
+        },
+        "status_history_to_status_check": {
+          "name": "status_history_to_status_check",
+          "value": "\"to_status\" in ('saved', 'applied', 'contacted', 'interview', 'offer', 'accepted', 'rejected', 'ghosted')"
+        }
+      },
+      "isRLSEnabled": false
     }
   },
-  "views": {},
   "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
-    "indexes": {}
+    "tables": {}
   }
 }

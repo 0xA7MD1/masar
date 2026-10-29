@@ -1,28 +1,27 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
+// The cron route checks CRON_SECRET itself; everything else needs a signed-in user.
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)", "/api/cron/(.*)"]);
 
-export async function middleware(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
-  const authenticated = await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
+export default clerkMiddleware(
+  async (auth, request) => {
+    if (isPublicRoute(request)) return NextResponse.next();
 
-  if (pathname === "/login") {
-    return authenticated ? NextResponse.redirect(new URL("/", request.url)) : NextResponse.next();
-  }
-  if (authenticated) return NextResponse.next();
+    const { userId, redirectToSignIn } = await auth();
+    if (userId) return NextResponse.next();
 
-  // Server actions and API calls get a plain 401 instead of an HTML redirect.
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const loginUrl = new URL("/login", request.url);
-  if (pathname !== "/") loginUrl.searchParams.set("next", `${pathname}${search}`);
-  return NextResponse.redirect(loginUrl);
-}
+    // Server actions and API calls get a plain 401 instead of an HTML redirect.
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return redirectToSignIn({ returnBackUrl: request.url });
+  },
+  { signInUrl: "/sign-in", signUpUrl: "/sign-up" },
+);
 
 export const config = {
   matcher: [

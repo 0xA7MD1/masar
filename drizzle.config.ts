@@ -6,9 +6,8 @@ loadEnvConfig(process.cwd());
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dialect: "turso",
+  dialect: "postgresql",
   dbCredentials: {
-    url: process.env.TURSO_DATABASE_URL || "file:local.db",
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
+    url: process.env.DATABASE_URL ?? "",
   },
 });
