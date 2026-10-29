@@ -1,6 +1,6 @@
 # التحويل الكامل: Clerk مع Supabase والحماية في القاعدة
 آخر تحديث: 2026-10-29
-الحالة: خطة بس، ما انفّذ منها شي.
+الحالة: المراحل من ١ إلى ٧ انفّذت في الكود. باقي الفحص بحسابين حقيقيين على Supabase، والتحديث اللحظي بعدين.
 
 ## الهدف
 - التطبيق يكلم القاعدة من المتصفح مباشرة بتوكن المستخدم، بدل ما يمر كل شي على السيرفر.
@@ -89,6 +89,10 @@
 - الملفات المتأثرة كثيرة، فالتنفيذ يكون مرحلة مرحلة، وكل مرحلة تنفحص قبل الي بعدها.
 
 ## قرارات
-- قرار · وين تنفّذ الطلبات: من المتصفح مباشرة، ولا من السيرفر بتوكن المستخدم؟ **ترشيحي: المتصفح**، لأنه الهدف من الربط ويفتح باب التحديث اللحظي.
-- قرار · Drizzle يبقى للجداول والـ migrations بس، ولا ننتقل لأدوات Supabase بالكامل؟ **ترشيحي: يبقى**، لأن الجداول مكتوبة فيه والفحص يعتمد عليه.
-- قرار · التحديث اللحظي الحين ولا بعدين؟ **ترشيحي: بعدين**، نخلّص التحويل ونتأكد منه أول.
+- أحمد وافق على الترشيحات الثلاثة: الطلبات من المتصفح، وDrizzle للجداول بس، والتحديث اللحظي بعدين. القرار محفوظ في `.agent/decisions/2026-10-29-supabase-rls.md`.
+
+## فروق عن الخطة وقت التنفيذ
+- Lists are read in pages, because the Data API returns at most 1000 rows per request.
+- `authenticated` can update only the form's columns, never `id`, `user_id` or the timestamps.
+- `anon` has no table grants at all, so a token without the right role fails loudly instead of returning empty lists.
+- The PGlite test runs as the real `anon` and `authenticated` roles; the old Clerk stub is gone.
