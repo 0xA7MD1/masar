@@ -145,3 +145,13 @@ drizzle/             SQL migrations: tables, policies and checks, grants, trigge
 scripts/             migrate, seed, Turso import, isolation check, icon generation
 public/              icons, service worker, offline page
 ```
+
+## Contributing
+
+Contributions are welcome. Fork the repo, make your change on a branch, and open a pull request against `dev`. Copy `.env.example` to `.env.local` and fill in your own Supabase and Clerk keys to run it locally.
+
+## License
+
+Masar is free software under the [GNU AGPL v3](LICENSE). You may use, copy, modify and share it, as long as you keep the copyright notice and credit the original project, and release your changes under the same license. This also applies when you run a modified version as a website: its users must be able to get its source code.
+
+Copyright (C) 2026 Ahmed ([0xA7MD1](https://github.com/0xA7MD1)).
