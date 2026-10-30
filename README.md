@@ -140,7 +140,7 @@ src/
   lib/supabase/      Supabase clients for the browser and the server, with the Clerk token
   lib/               constants, dates, metrics, query keys, validation
   stores/            Zustand UI stores
-  middleware.ts      Clerk route protection
+  proxy.ts           Clerk route protection
 drizzle/             SQL migrations: tables, policies and checks, grants, triggers, functions
 scripts/             migrate, seed, Turso import, isolation check, icon generation
 public/              icons, service worker, offline page
