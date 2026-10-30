@@ -1,5 +1,5 @@
 # app
-آخر تحديث: 2026-10-29
+آخر تحديث: 2026-10-30
 
 ## الحين
 - Data access moved to `@supabase/supabase-js` with Clerk tokens: the browser reads and writes Supabase directly, server components prefetch with the request's token, and RLS policies, column grants, CHECK constraints, triggers and the `import_backup` RPC enforce isolation. Lint, typecheck, build and `pnpm test:isolation` (38 checks) pass. Ahmed ran the migrations on Supabase, connected Clerk and Supabase, imported his Turso data and checked the app locally. PR from `dev` to `main` opened; not merged.
@@ -10,6 +10,7 @@
 - Command · Clerk dashboard → Domains: add the production domain if you use a Clerk production instance — its domain then goes in Supabase Third-Party Auth too; without it sign-in or the token check fails in production.
 
 ## الجاي
+- Upgrade to Next.js 16: support for 15.x ended on 2026-10-21, so a future 15.x advisory may get no patch. Today 15.5.28 is patched and `pnpm audit` is clean apart from dev-only drizzle-kit esbuild and a low shadcn deepmerge.
 - Merge the PR into `main` when you approve it, then check the deployed app once.
 - Retire Turso after you confirm the import.
 - Optional: a Clerk `user.deleted` webhook to delete a removed user's rows.
