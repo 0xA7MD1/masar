@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * so moving between pages reads the hydrated cache instead of hitting the database again.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  // The middleware already guards these routes; without a user there is no token to read with.
+  // The proxy already guards these routes; without a user there is no token to read with.
   await requireUserId();
   const supabase = await createServerSupabase();
 
