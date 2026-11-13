@@ -1,10 +1,10 @@
 # app
-آخر تحديث: 2026-10-30
+آخر تحديث: 2026-11-14
 
 ## الحين
 - Data access moved to `@supabase/supabase-js` with Clerk tokens: the browser reads and writes Supabase directly, server components prefetch with the request's token, and RLS policies, column grants, CHECK constraints, triggers and the `import_backup` RPC enforce isolation. Lint, typecheck, build and `pnpm test:isolation` (38 checks) pass. Ahmed ran the migrations on Supabase, connected Clerk and Supabase, imported his Turso data and checked the app locally. PR from `dev` to `main` opened; not merged.
 - Repo made public under AGPL-3.0 (`LICENSE`, README Contributing and License sections). Local `.env.local` deleted; secrets live in Vercel and Ahmed's password manager. History scanned: no secrets.
-- `/api/cron/keepalive` calls the `keepalive()` RPC as anon, guarded by `CRON_SECRET`, every 5 days.
+- `/api/cron/keepalive` calls the `keepalive()` RPC as anon (one real row from `settings`), guarded by `CRON_SECRET`, three times a day at 06:00, 14:00 and 22:00 UTC (2026-11-14). The old every-5-days schedule let Supabase pause the database. PR to `main` opened; takes effect after merge and deploy.
 - Next.js 16.4.3 and React 19.2.9 on `dev` (2026-10-30): `middleware.ts` renamed to `proxy.ts`, ESLint moved to the flat `eslint-config-next` config, PostCSS pinned past its advisories. Typecheck, lint, build and `pnpm test:isolation` pass; not yet opened in a browser.
 
 ## يحتاجك
