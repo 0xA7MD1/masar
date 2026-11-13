@@ -12,7 +12,9 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 /**
- * Called every 5 days by Vercel Cron so the Supabase free tier never pauses for inactivity.
+ * Called three times a day (06:00, 14:00, 22:00 UTC) by Vercel Cron so the Supabase free tier
+ * never pauses for inactivity. Supabase judges activity by requests per day over the last week,
+ * so frequency matters more than query weight; Hobby allows each cron once a day, hence three.
  * Vercel sends `Authorization: Bearer $CRON_SECRET` when that variable is set.
  */
 export async function GET(request: NextRequest) {
